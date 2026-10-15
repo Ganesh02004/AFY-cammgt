@@ -246,7 +246,7 @@
     // Google Sign-In via Firebase (with automatic fallback to Instant SSO on browser cookie blocks)
     function signInWithGoogleFirebase(useRedirect = false) {
         if (typeof firebase === 'undefined' || !firebase.auth) {
-            alert("Firebase library is still initializing. Please check your internet connection.");
+            showStatus("<i class='fa-solid fa-circle-notch fa-spin mr-1'></i> Authentication library is initializing. Please wait a moment or use Quick Google Sign-In below.", "warning");
             return;
         }
 

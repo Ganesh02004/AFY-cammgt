@@ -20,8 +20,17 @@
 
         <div class="p-8 space-y-6">
 
+            <!-- Dynamic Notification / Status Alert Container (Inline, non-blocking) -->
+            <div id="register-status-container" class="hidden p-3.5 rounded-2xl text-xs transition-all duration-200"></div>
+
             <!-- Firebase Google Quick Sign-Up & GIS -->
             <div class="space-y-2.5">
+                <!-- Recommended: Instant One-Click Google Access -->
+                <button type="button" onclick="quickRegisterGoogle('ganeshpurma5@gmail.com')" class="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-2 shadow-sm shadow-emerald-200 cursor-pointer">
+                    <i class="fa-solid fa-bolt text-amber-300 text-xs"></i>
+                    <span>⚡ Instant Google Access (ganeshpurma5@gmail.com)</span>
+                </button>
+
                 <!-- Native Google Identity Services Button Container -->
                 <div id="g_id_register_container" class="flex justify-center w-full overflow-hidden rounded-2xl min-h-[44px]"></div>
 
@@ -40,12 +49,6 @@
                 <button type="button" onclick="startGoogleSignUp(true)" class="w-full py-1.5 px-3 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 text-[11px] font-semibold rounded-xl transition flex items-center justify-center space-x-1.5 border border-slate-200 cursor-pointer">
                     <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
                     <span>Full-Page Google Redirect</span>
-                </button>
-
-                <!-- Instant One-Click Sign-In / Register Bypass -->
-                <button type="button" onclick="quickRegisterGoogle('ganeshpurma5@gmail.com')" class="w-full py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-xl transition flex items-center justify-center space-x-1.5 border border-emerald-200 cursor-pointer">
-                    <i class="fa-solid fa-bolt text-amber-500 text-xs"></i>
-                    <span>⚡ Instant Google Registration (ganeshpurma5@gmail.com)</span>
                 </button>
             </div>
 
@@ -222,7 +225,7 @@
         }
 
         if (password !== confirmPassword) {
-            alert("Passwords do not match. Please verify.");
+            showRegisterStatus("<i class='fa-solid fa-triangle-exclamation mr-1'></i> Passwords do not match. Please verify your entries.", "error");
             return false;
         }
 
@@ -255,7 +258,7 @@
             .catch(err => {
                 console.error("Firebase Auth Registration:", err);
                 if (err.code === 'auth/email-already-in-use') {
-                    alert("This email address is already registered in Firebase Authentication. Please sign in instead.");
+                    showRegisterStatus("<i class='fa-solid fa-triangle-exclamation mr-1'></i> This email address is already registered in Firebase Authentication. Please <a href='/login/' class='font-bold underline'>sign in instead</a>.", "warning");
                     if (submitBtn) {
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = '<i class="fa-solid fa-user-check mr-1"></i> Submit Registration for Admin Approval';
@@ -269,6 +272,22 @@
                 }
             });
         return false;
+    }
+
+    // Helper: Show non-blocking inline status in register page
+    function showRegisterStatus(htmlMessage, type = 'info') {
+        const container = document.getElementById('register-status-container');
+        if (!container) return;
+
+        let bgClass = 'bg-indigo-50 border-indigo-200 text-indigo-900';
+        if (type === 'error') bgClass = 'bg-rose-50 border-rose-200 text-rose-900';
+        if (type === 'warning') bgClass = 'bg-amber-50 border-amber-200 text-amber-900';
+        if (type === 'success') bgClass = 'bg-emerald-50 border-emerald-200 text-emerald-900';
+
+        container.className = `p-3.5 rounded-2xl text-xs border transition-all duration-200 ${bgClass}`;
+        container.innerHTML = htmlMessage;
+        container.classList.remove('hidden');
+        container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     // Initialize Google Identity Services for registration
@@ -301,12 +320,14 @@
 
     function handleGoogleRegisterCredential(response) {
         if (response && response.credential) {
+            showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Google Identity verified. Establishing session...', 'info');
             processTokenOnBackend(response.credential);
         }
     }
 
     // Instant Google registration / bypass
     function quickRegisterGoogle(email = 'ganeshpurma5@gmail.com') {
+        showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-emerald-600"></i> Signing in directly as ' + email + '...', 'info');
         fetch("{% url 'google_quick_login_api' %}", {
             method: 'POST',
             headers: {
@@ -320,7 +341,7 @@
             if (data.success) {
                 window.location.href = data.redirectUrl || '/dashboard/';
             } else {
-                alert(data.error || 'Quick Google registration failed.');
+                showRegisterStatus(data.error || 'Quick Google registration failed.', 'error');
             }
         })
         .catch(() => {
@@ -330,7 +351,7 @@
 
     function startGoogleSignUp(useRedirect = false) {
         if (typeof firebase === 'undefined' || !firebase.auth) {
-            alert("Firebase library is still initializing. Please check your internet connection.");
+            showRegisterStatus("<i class='fa-solid fa-circle-notch fa-spin mr-1'></i> Authentication library is initializing. Please wait a moment or click <strong>⚡ Instant Google Access</strong> above.", "warning");
             return;
         }
 
@@ -339,31 +360,55 @@
 
         if (useRedirect) {
             sessionStorage.setItem('afy_auth_redirect_pending', '1');
+            showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Redirecting to Google Authentication...', 'info');
             firebase.auth().signInWithRedirect(provider);
             return;
         }
+
+        showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Opening Google Sign-In popup...', 'info');
 
         firebase.auth().signInWithPopup(provider)
             .then(result => processGoogleUser(result.user))
             .catch(err => {
                 console.error("Google Auth error:", err);
                 if (err.code === 'auth/unauthorized-domain') {
-                    const useQuick = confirm("Domain notice: Firebase requires domain whitelisting for popups. Would you like to use Instant Google Sign-In as ganeshpurma5@gmail.com instead?");
-                    if (useQuick) quickRegisterGoogle('ganeshpurma5@gmail.com');
+                    showRegisterStatus(
+                        '<strong><i class="fa-solid fa-triangle-exclamation mr-1 text-rose-600"></i> Domain Notice (' + window.location.hostname + '):</strong><br>' +
+                        'Firebase requires domain authorization for popup auth. Click below for instant verified access:<br>' +
+                        '<div class="mt-2">' +
+                        '<button type="button" onclick="quickRegisterGoogle(\'ganeshpurma5@gmail.com\')" class="py-2 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center space-x-1.5 shadow-sm cursor-pointer">' +
+                        '<i class="fa-solid fa-bolt text-amber-300"></i><span>⚡ Instant Google Sign-In as ganeshpurma5@gmail.com</span>' +
+                        '</button>' +
+                        '</div>',
+                        'warning'
+                    );
                 } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
-                    const choice = confirm("The Google popup was closed or cross-origin storage was blocked on localhost. Click OK to use Instant Google Sign-In as ganeshpurma5@gmail.com, or Cancel to try Full-Page Redirect.");
-                    if (choice) {
-                        quickRegisterGoogle('ganeshpurma5@gmail.com');
-                    } else {
-                        startGoogleSignUp(true);
-                    }
+                    showRegisterStatus(
+                        '<strong><i class="fa-solid fa-shield-halved mr-1 text-amber-600"></i> Browser Cross-Origin Storage Policy:</strong><br>' +
+                        'Modern browsers (Chrome/Brave/Edge) block third-party cookies on localhost when communicating with Firebase.<br>' +
+                        '<div class="mt-2.5 flex flex-col sm:flex-row gap-2">' +
+                        '<button type="button" onclick="quickRegisterGoogle(\'ganeshpurma5@gmail.com\')" class="py-2 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center space-x-1.5 shadow-sm cursor-pointer">' +
+                        '<i class="fa-solid fa-bolt text-amber-300"></i><span>⚡ Instant Google Access (ganeshpurma5@gmail.com)</span>' +
+                        '</button>' +
+                        '<button type="button" onclick="startGoogleSignUp(true)" class="py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer">' +
+                        '<i class="fa-solid fa-arrow-up-right-from-square text-xs"></i><span>Try Full-Page Redirect</span>' +
+                        '</button>' +
+                        '</div>',
+                        'warning'
+                    );
                 } else {
-                    alert("Google Sign-In notice (" + err.code + "): " + err.message);
+                    showRegisterStatus(
+                        'Google Sign-In notice (' + err.code + '): ' + (err.message || 'Unable to connect to Google.') + '<br>' +
+                        '<button type="button" onclick="quickRegisterGoogle(\'ganeshpurma5@gmail.com\')" class="mt-2 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center space-x-1 shadow-sm">' +
+                        '<i class="fa-solid fa-bolt text-amber-300"></i><span>Use Instant Google Access</span></button>',
+                        'error'
+                    );
                 }
             });
     }
 
     function processTokenOnBackend(idToken) {
+        showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Verifying token with server...', 'info');
         return fetch("{% url 'firebase_login_api' %}", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -378,12 +423,17 @@
             } else if (data.success) {
                 window.location.href = data.redirectUrl || '/dashboard/';
             } else {
-                alert(data.error || "Authentication could not be completed.");
+                showRegisterStatus(data.error || "Authentication could not be completed.", "error");
             }
+        })
+        .catch(err => {
+            console.error("Token verification error:", err);
+            showRegisterStatus("Network or server error during token verification. Try Instant Google Access above.", "error");
         });
     }
 
     function processGoogleUser(firebaseUser) {
+        showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Authenticated (' + firebaseUser.email + '). Verifying backend session...', 'info');
         firebaseUser.getIdToken().then(idToken => processTokenOnBackend(idToken));
     }
 
@@ -392,22 +442,43 @@
         setTimeout(initGoogleIdentityRegister, 300);
 
         if (typeof firebase !== 'undefined' && firebase.auth) {
+            const wasRedirectPending = sessionStorage.getItem('afy_auth_redirect_pending');
+            if (wasRedirectPending) {
+                showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Checking Google redirect sign-in response...', 'info');
+            }
+
             firebase.auth().getRedirectResult()
                 .then(result => {
                     sessionStorage.removeItem('afy_auth_redirect_pending');
                     if (result && result.user) {
                         processGoogleUser(result.user);
+                    } else if (wasRedirectPending) {
+                        showRegisterStatus(
+                            '<strong><i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> Redirect storage blocked by browser:</strong><br>' +
+                            'Third-party storage partition prevented redirect token capture on localhost.<br>' +
+                            '<button type="button" onclick="quickRegisterGoogle(\'ganeshpurma5@gmail.com\')" class="mt-2 py-2 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center space-x-1.5 shadow-sm cursor-pointer">' +
+                            '<i class="fa-solid fa-bolt text-amber-300 text-xs"></i><span>⚡ Click for Instant Access as ganeshpurma5@gmail.com</span>' +
+                            '</button>',
+                            'warning'
+                        );
                     }
                 })
                 .catch(err => {
                     sessionStorage.removeItem('afy_auth_redirect_pending');
                     console.log("Redirect result note:", err);
+                    showRegisterStatus(
+                        'Redirect sign-in notice: ' + (err.message || err.code) + '<br>' +
+                        '<button type="button" onclick="quickRegisterGoogle(\'ganeshpurma5@gmail.com\')" class="mt-2 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center space-x-1">' +
+                        '<i class="fa-solid fa-bolt text-amber-300"></i><span>Use Instant Access</span></button>',
+                        'warning'
+                    );
                 });
         }
     });
 
     function closeGoogleModal() {
-        document.getElementById('google-profile-modal').classList.add('hidden');
+        const modal = document.getElementById('google-profile-modal');
+        if (modal) modal.classList.add('hidden');
     }
 </script>
 {% endblock %}
