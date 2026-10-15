@@ -40,8 +40,11 @@ ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://*.run.app',
+    'https://*.vercel.app',
     'https://*.trycloudflare.com',
+    'http://*.trycloudflare.com',
     'https://*.ngrok-free.app',
+    'http://*.ngrok-free.app',
     'https://*.ngrok.io',
     'https://*.render.com',
     'https://*.railway.app',
@@ -50,6 +53,10 @@ CSRF_TRUSTED_ORIGINS = [
     'https://localhost:8000',
     'https://127.0.0.1:8000',
 ]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 
 # Application definition
 
@@ -97,18 +104,28 @@ WSGI_APPLICATION = 'portal_project.wsgi.application'
 
 
 # Database
-# Uses WAL-hardened local SQLite database (synced with Firebase Realtime Database)
-import dj_database_url
-
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-        )
-    }
+    try:
+        import dj_database_url
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=DATABASE_URL,
+                conn_max_age=600,
+            )
+        }
+    except ImportError:
+        # Fall back to SQLite if dj_database_url is not installed
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+                'OPTIONS': {
+                    'timeout': 60,
+                }
+            }
+        }
 else:
     DATABASES = {
         'default': {

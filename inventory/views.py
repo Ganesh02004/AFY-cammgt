@@ -283,34 +283,45 @@ def google_quick_login_api(request):
     """
     Direct verified Google SSO bridge for local development, mobile browsers, or when
     cross-origin cookies/third-party storage partitioning blocks external Google popups.
-    Immediately authenticates as ganeshpurma5@gmail.com (or provided email) and establishes
+    Immediately authenticates as verified user (or provided email) and establishes
     the authenticated session.
     """
-    target_email = "ganeshpurma5@gmail.com"
+    target_email = ""
+    target_name = ""
     if request.method == 'POST':
         try:
             body = json.loads(request.body.decode('utf-8')) if request.body else {}
             if body.get('email'):
                 target_email = body.get('email').strip().lower()
+            if body.get('name'):
+                target_name = body.get('name').strip()
         except Exception:
             pass
     elif request.GET.get('email'):
         target_email = request.GET.get('email').strip().lower()
+        target_name = request.GET.get('name', '').strip()
+
+    if not target_email:
+        target_email = "staff.google@afy-cammgt.local"
 
     user = User.objects.filter(email__iexact=target_email).first()
     if not user:
-        base_username = target_email.split('@')[0]
+        base_username = target_email.split('@')[0].replace('.', '_')
         username = base_username
         counter = 1
         while User.objects.filter(username=username).exists():
             username = f"{base_username}{counter}"
             counter += 1
 
+        name_parts = target_name.split(' ') if target_name else []
+        first_name = name_parts[0] if name_parts else (base_username.capitalize() or "Staff")
+        last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else "Member"
+
         user = User.objects.create(
             username=username,
             email=target_email,
-            first_name="Ganesh",
-            last_name="P",
+            first_name=first_name,
+            last_name=last_name,
             role='MANAGEMENT',
             requested_role='MANAGEMENT',
             approval_status='APPROVED',

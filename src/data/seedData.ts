@@ -68,16 +68,16 @@ export const initialUsers: User[] = [
   },
   {
     id: 7,
-    username: "Ganesh",
-    email: "ganeshpurma5@gmail.com",
-    first_name: "Ganesh",
-    last_name: "P",
+    username: "operations_lead",
+    email: "operations.lead@afy-inventory.com",
+    first_name: "Vikram",
+    last_name: "Rao",
     role: "MANAGEMENT",
     approval_status: "APPROVED",
-    phone: "9740246889",
+    phone: "+91 97402 46889",
     address: "BTM Layout 2nd Stage, Bengaluru",
-    work_location: "South Hub, Bengaluru",
-    is_staff: false,
+    work_location: "Bengaluru South Hub",
+    is_staff: true,
     is_active: true,
     created_at: "2026-10-14T07:45:10Z"
   }
@@ -536,7 +536,7 @@ export const initialDevices: Device[] = [
     initial_poc_id: 9,
     current_status: "WITH_COLLECTOR",
     current_custodian_type: "USER",
-    current_custodian_user_id: 7, // Ganesh
+    current_custodian_user_id: 7, // Vikram Rao (Operations Lead)
     current_custodian_worker_id: null,
     received_date: "2026-10-14T07:48:29Z",
     notes: "Client test device.",
@@ -1041,7 +1041,7 @@ export const initialNotifications: AppNotification[] = [
   },
   {
     id: 4,
-    user_id: 7, // Ganesh
+    user_id: 7, // Vikram Rao
     title: "Welcome to CamGuard Inventory Portal",
     message: "Your profile is active. You can manage assigned equipment and perform field operations.",
     category: "SYSTEM",

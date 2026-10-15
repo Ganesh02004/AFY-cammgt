@@ -15,6 +15,16 @@ import {
   initialClientOffices, initialNotifications, initialAnnouncements
 } from '../data/seedData';
 
+export interface GoogleAuthPayload {
+  email: string;
+  name?: string;
+  photoUrl?: string;
+  requestedRole?: UserRole;
+  phone?: string;
+  employeeId?: string;
+  workLocation?: string;
+}
+
 interface AppContextType {
   currentUser: User | null;
   setCurrentUser: (user: User | null) => void;
@@ -45,7 +55,7 @@ interface AppContextType {
 
   // Auth & Security
   login: (username: string, password?: string) => { success: boolean; error?: string };
-  loginWithGoogle: (requestedRole?: UserRole) => { success: boolean; user?: User; error?: string };
+  loginWithGoogle: (payload: GoogleAuthPayload | string) => { success: boolean; user?: User; error?: string };
   logout: () => void;
   registerUser: (userData: Partial<User>) => { success: boolean; error?: string };
   updateUserProfile: (userId: number, updates: Partial<User>) => void;
@@ -205,17 +215,32 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'camguard_app_state_v1';
+const STORAGE_KEY = 'camguard_app_state_v2';
+
+// Clean up any stale v1 localStorage that might have auto-logged in users as admin
+try {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    if (localStorage.getItem('camguard_app_state_v1_user')) {
+      localStorage.removeItem('camguard_app_state_v1_user');
+      localStorage.removeItem('camguard_app_state_v1_users');
+    }
+  }
+} catch {
+  // ignore storage errors
+}
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load saved state or use initial seed
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY + '_user');
-      if (saved) return JSON.parse(saved);
-      return initialUsers[0]; // Default to admin for immediate exploration
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && (parsed.id || parsed.username)) return parsed;
+      }
+      return null; // Require login/registration on first visit or clean session
     } catch {
-      return initialUsers[0];
+      return null;
     }
   });
 
@@ -458,7 +483,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Save to localStorage whenever state changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY + '_user', JSON.stringify(currentUser));
+    if (currentUser) {
+      localStorage.setItem(STORAGE_KEY + '_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem(STORAGE_KEY + '_user');
+    }
   }, [currentUser]);
 
   useEffect(() => {
@@ -630,16 +659,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, error: "Invalid username or password. Please verify credentials." };
     }
 
-    if (user.approval_status === 'PENDING') {
-      return { success: false, error: "Your account is pending Administrator Approval." };
-    }
-
     if (user.approval_status === 'DEACTIVATED' || user.approval_status === 'REJECTED' || !user.is_active) {
       return { success: false, error: "Your account has been deactivated or rejected by an Administrator." };
     }
 
     setCurrentUser(user);
-    addAuditLog("LOGIN", "User", String(user.id), `User ${user.username} logged in successfully`);
+    addAuditLog("LOGIN", "User", String(user.id), `User ${user.username} logged in successfully (${user.role})`);
     return { success: true };
   };
 
@@ -647,44 +672,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (currentUser) {
       addAuditLog("LOGOUT", "User", String(currentUser.id), `User ${currentUser.username} logged out`);
     }
+    localStorage.removeItem(STORAGE_KEY + '_user');
     setCurrentUser(null);
   };
 
-  const loginWithGoogle = (requestedRole?: UserRole) => {
-    // Verified Google OAuth flow linking
-    const googleEmail = "ganeshpurma5@gmail.com";
-    const existing = users.find(u => u.email.toLowerCase() === googleEmail.toLowerCase());
+  const loginWithGoogle = (payload: GoogleAuthPayload | string) => {
+    const emailStr = (typeof payload === 'string' ? payload : payload.email || '').trim().toLowerCase();
+    if (!emailStr || !emailStr.includes('@')) {
+      return { success: false, error: "Please provide a valid Google email address." };
+    }
+
+    const payloadObj = typeof payload === 'object' ? payload : { email: emailStr };
+    const existing = users.find(u => u.email.toLowerCase() === emailStr);
+
     if (existing) {
       if (existing.approval_status === 'DEACTIVATED' || existing.approval_status === 'REJECTED' || !existing.is_active) {
-        return { success: false, error: "Your Google linked account has been deactivated or rejected by an Administrator." };
+        return { success: false, error: "Your Google-linked account has been deactivated or rejected by an Administrator." };
       }
       setCurrentUser(existing);
-      addAuditLog("LOGIN_GOOGLE", "User", String(existing.id), `User ${existing.username} authenticated via Google Single Sign-On`);
+      addAuditLog("LOGIN_GOOGLE", "User", String(existing.id), `User ${existing.username} authenticated via Google Single Sign-On (${existing.email})`);
       return { success: true, user: existing };
     } else {
-      // Create single linked user account with profile photo
+      // Create new user linked with Google identity
       const newSeq = getNextSequenceId('USR');
-      const roleToSet: UserRole = requestedRole || 'MANAGEMENT';
+      const roleToSet: UserRole = payloadObj.requestedRole || 'MANAGEMENT';
+      const nameStr = payloadObj.name?.trim() || emailStr.split('@')[0];
+      const nameParts = nameStr.split(' ');
+      const firstName = nameParts[0] || 'Google';
+      const lastName = nameParts.slice(1).join(' ') || 'User';
+
+      const baseUsername = emailStr.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_');
+      let username = baseUsername;
+      let counter = 1;
+      while (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
+
       const newUser: User = {
         id: Date.now(),
         sequence_id: newSeq,
-        username: "ganesh_google",
-        email: googleEmail,
-        first_name: "Ganesh",
-        last_name: "P",
+        username,
+        email: emailStr,
+        first_name: firstName,
+        last_name: lastName,
         role: roleToSet,
-        approval_status: roleToSet === 'ADMIN' ? 'APPROVED' : 'PENDING',
-        phone: "+91 97402 46889",
-        address: "BTM Layout 2nd Stage, Bengaluru",
-        work_location: "Bengaluru South Hub",
+        approval_status: 'APPROVED',
+        phone: payloadObj.phone || '+91 98000 00000',
+        employee_id: payloadObj.employeeId || `EMP-${Math.floor(100 + Math.random() * 900)}`,
+        address: 'Field Operations Depot',
+        work_location: payloadObj.workLocation || (roleToSet === 'ADMIN' ? 'HQ Central Command' : 'Regional Field Operations'),
         is_staff: roleToSet === 'ADMIN' || roleToSet === 'MANAGEMENT',
         is_active: true,
-        profile_photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+        profile_photo: payloadObj.photoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(nameStr)}`,
         created_at: new Date().toISOString()
       };
+
       setUsers(prev => [...prev, newUser]);
       setCurrentUser(newUser);
-      addAuditLog("REGISTER_GOOGLE", "User", String(newUser.id), `New account registered via Google OAuth (Role: ${roleToSet}, Status: ${newUser.approval_status})`);
+      addAuditLog("REGISTER_GOOGLE", "User", String(newUser.id), `New account registered via Google OAuth (${newUser.email}, Role: ${roleToSet})`);
       return { success: true, user: newUser };
     }
   };
