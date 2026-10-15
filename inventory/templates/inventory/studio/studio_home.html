@@ -1,0 +1,180 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Setup Studio — Object & Field Builder | {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Studio Header -->
+    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-bold text-indigo-200 uppercase tracking-wider mb-2">
+                    <i class="fa-solid fa-shapes text-amber-400"></i>
+                    <span>Salesforce-Style Metadata Studio</span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Object & Field Builder</h1>
+                <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl">
+                    Dynamically configure fields, mandatory/optional rules, dropdown choices, and layouts for business entities without modifying application code or database schema.
+                </p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button type="button" onclick="openNewObjectModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-indigo-600/30 flex items-center space-x-2 cursor-pointer">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>New Custom Object</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Studio Stats Strip -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-white/10">
+            <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
+                <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Business Objects</p>
+                <p class="text-xl sm:text-2xl font-black text-white mt-0.5">{{ total_objects }}</p>
+            </div>
+            <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
+                <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Total Defined Fields</p>
+                <p class="text-xl sm:text-2xl font-black text-indigo-300 mt-0.5">{{ total_fields }}</p>
+            </div>
+            <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
+                <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Active Fields</p>
+                <p class="text-xl sm:text-2xl font-black text-emerald-400 mt-0.5">{{ custom_fields_count }}</p>
+            </div>
+            <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
+                <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Active Choices</p>
+                <p class="text-xl sm:text-2xl font-black text-amber-300 mt-0.5">{{ total_choices }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Object Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {% for obj in objects %}
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+            <div>
+                <div class="flex items-start justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-11 h-11 rounded-2xl {% if obj.is_system %}bg-indigo-50 text-indigo-600{% else %}bg-purple-50 text-purple-600{% endif %} flex items-center justify-center text-lg shadow-inner">
+                            <i class="fa-solid {{ obj.icon }}"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-900">{{ obj.name }}</h2>
+                            <code class="text-[11px] font-mono text-slate-400">{{ obj.api_name }}</code>
+                        </div>
+                    </div>
+                    {% if obj.is_system %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                        System Object
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                        Custom
+                    </span>
+                    {% endif %}
+                </div>
+
+                <p class="text-xs text-slate-500 mt-3 line-clamp-2">
+                    {{ obj.description|default:"Configurable entity form and fields." }}
+                </p>
+
+                <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+                    <span class="flex items-center space-x-1.5">
+                        <i class="fa-solid fa-list-check text-indigo-500"></i>
+                        <span><strong>{{ obj.active_field_count }}</strong> Active Fields</span>
+                    </span>
+                    <span class="flex items-center space-x-1">
+                        <i class="fa-solid fa-circle text-[8px] {% if obj.is_active %}text-emerald-500{% else %}text-slate-300{% endif %}"></i>
+                        <span class="text-[11px]">{% if obj.is_active %}Published{% else %}Inactive{% endif %}</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="mt-5 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
+                <a href="{% url 'builder_object_detail' api_name=obj.api_name %}" class="py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold text-center transition flex items-center justify-center space-x-1.5">
+                    <i class="fa-solid fa-sliders text-[11px]"></i>
+                    <span>Manage Fields</span>
+                </a>
+                <a href="{% url 'dynamic_record_list' api_name=obj.api_name %}" class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center transition flex items-center justify-center space-x-1.5">
+                    <i class="fa-solid fa-table-list text-[11px]"></i>
+                    <span>View Records</span>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- New Custom Object Modal -->
+<div id="new-object-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-scale-short">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-bold">
+                    <i class="fa-solid fa-cube"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-slate-900">Create New Business Object</h3>
+                    <p class="text-[11px] text-slate-500">Define a new configurable entity</p>
+                </div>
+            </div>
+            <button onclick="closeNewObjectModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form method="post" action="{% url 'builder_object_create' %}" class="space-y-4 text-xs">
+            {% csrf_token %}
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Object Display Name *</label>
+                <input type="text" name="name" id="obj-name-input" required placeholder="e.g. Delivery Vehicle, Security Agency" class="form-input text-xs" oninput="autoGenerateApiKey(this.value)">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">API Key / Identifier *</label>
+                <input type="text" name="api_name" id="obj-api-input" required placeholder="e.g. delivery_vehicle" class="form-input text-xs font-mono">
+                <span class="text-[10px] text-slate-400 mt-0.5 block">Unique system identifier (lowercase, underscores only)</span>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Icon (FontAwesome Class)</label>
+                <input type="text" name="icon" value="fa-cube" placeholder="e.g. fa-truck, fa-shield, fa-box" class="form-input text-xs">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Description</label>
+                <textarea name="description" rows="2" placeholder="Briefly describe what this entity represents..." class="form-textarea text-xs"></textarea>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button type="button" onclick="closeNewObjectModal()" class="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">
+                    Cancel
+                </button>
+                <button type="submit" class="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-200">
+                    Create & Configure Fields
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openNewObjectModal() {
+    const modal = document.getElementById('new-object-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+function closeNewObjectModal() {
+    const modal = document.getElementById('new-object-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+function autoGenerateApiKey(val) {
+    const apiInput = document.getElementById('obj-api-input');
+    if (apiInput) {
+        apiInput.value = val.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+    }
+}
+</script>
+{% endblock %}

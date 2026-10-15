@@ -1,0 +1,198 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Complete Your Profile — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-8 px-4">
+    <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-800 p-8 text-white relative">
+            <div class="flex items-center space-x-4">
+                <div class="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-3xl shadow-inner shrink-0">
+                    <i class="fa-solid fa-id-card"></i>
+                </div>
+                <div>
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-500/50 text-indigo-100 border border-indigo-400/30">Step 2 of 2</span>
+                    <h1 class="text-xl sm:text-2xl font-black tracking-tight mt-1">Complete Your Profile</h1>
+                    <p class="text-xs text-indigo-100 mt-0.5">Please provide your verified personal details and photograph to complete registration.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 sm:p-8 space-y-6">
+
+            <!-- Security Notice -->
+            <div class="p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl text-xs text-indigo-900 flex items-start space-x-3">
+                <div class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                    <i class="fa-solid fa-shield-halved text-xs"></i>
+                </div>
+                <div>
+                    <strong class="font-bold">Administrator Review Required:</strong>
+                    <p class="text-[11px] text-indigo-800 mt-0.5">
+                        Your requested role and details will be submitted to the System Administrator for verification. After approval, full operational access will be activated.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Error Messages -->
+            {% if form.errors %}
+            <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 space-y-1">
+                <strong class="font-bold flex items-center"><i class="fa-solid fa-circle-exclamation mr-1.5"></i> Please correct the following errors:</strong>
+                <ul class="list-disc list-inside space-y-0.5 text-[11px] pt-1">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                        <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" class="space-y-6 text-xs">
+                {% csrf_token %}
+
+                <!-- Section: Personal Information -->
+                <div class="space-y-4">
+                    <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">
+                        1. Personal & Contact Details
+                    </h2>
+
+                    <!-- Email (Read-Only) -->
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Authenticated Account Email</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                                <i class="fa-solid fa-envelope text-xs"></i>
+                            </span>
+                            <input type="email" readonly value="{{ user.email }}" class="form-input pl-9 bg-slate-50 text-slate-600 font-mono text-xs cursor-not-allowed">
+                        </div>
+                        <span class="text-[10px] text-slate-400 mt-0.5 block">Verified by Firebase Authentication.</span>
+                    </div>
+
+                    <!-- Names -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">First Name *</label>
+                            {{ form.first_name }}
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Last Name *</label>
+                            {{ form.last_name }}
+                        </div>
+                    </div>
+
+                    <!-- Mobile Number (10 digits) -->
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Mobile Phone (Indian 10-Digit) *</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">+91</span>
+                            {{ form.phone }}
+                        </div>
+                        <span class="text-[10px] text-slate-400 mt-0.5 block">Must be exactly 10 digits starting with 6, 7, 8, or 9.</span>
+                    </div>
+                </div>
+
+                <!-- Section: Profile Photograph -->
+                <div class="space-y-4 pt-4 border-t border-slate-100">
+                    <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">
+                        2. Staff Photograph Identification *
+                    </h2>
+
+                    <div class="flex flex-col sm:flex-row items-center gap-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                        <!-- Preview Box -->
+                        <div class="w-28 h-28 rounded-2xl bg-white border-2 border-dashed border-indigo-300 flex items-center justify-center overflow-hidden shrink-0 shadow-xs relative" id="photo-preview-container">
+                            <img id="photo-preview-img" src="" alt="Preview" class="w-full h-full object-cover hidden">
+                            <div id="photo-placeholder" class="text-center text-slate-400 p-2">
+                                <i class="fa-solid fa-camera text-2xl mb-1 text-indigo-400"></i>
+                                <span class="text-[9px] block uppercase font-bold text-slate-500">Upload Photo</span>
+                            </div>
+                        </div>
+
+                        <div class="flex-1 space-y-2">
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase">Select Profile Photograph *</label>
+                            {{ form.profile_photo }}
+                            <p class="text-[11px] text-slate-500 leading-relaxed">
+                                Please upload a clear passport-style headshot. Accepted formats: JPG, PNG, WEBP. Maximum file size: 5 MB.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Operational Role -->
+                <div class="space-y-4 pt-4 border-t border-slate-100">
+                    <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">
+                        3. Requested Operational Role *
+                    </h2>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-2">Select Your Role</label>
+                        {{ form.requested_role }}
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+                        <div class="p-3 bg-blue-50/60 border border-blue-200 rounded-2xl">
+                            <strong class="text-blue-900 block font-bold mb-0.5"><i class="fa-solid fa-briefcase text-blue-600 mr-1"></i> Management Staff</strong>
+                            <p class="text-blue-800 text-[10px]">Supervises master inventory, schedules dispatches, oversees custody transfers, and conducts return inspections.</p>
+                        </div>
+                        <div class="p-3 bg-emerald-50/60 border border-emerald-200 rounded-2xl">
+                            <strong class="text-emerald-900 block font-bold mb-0.5"><i class="fa-solid fa-truck text-emerald-600 mr-1"></i> Postman / Field Collector</strong>
+                            <p class="text-emerald-800 text-[10px]">Handles on-the-ground client pickups, worker deliveries, return collections, and mobile QR code scanning.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Address & Location -->
+                <div class="space-y-4 pt-4 border-t border-slate-100">
+                    <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">
+                        4. Address & Work Location
+                    </h2>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Residential / Operational Address</label>
+                        {{ form.address }}
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Assigned Operating Location / Area</label>
+                        {% include 'inventory/location_picker.html' %}
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
+                    <a href="{% url 'logout' %}" class="px-4 py-2 text-slate-500 hover:text-slate-700 text-xs font-bold transition">
+                        <i class="fa-solid fa-power-off mr-1"></i> Cancel & Sign Out
+                    </a>
+                    <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-indigo-200 flex items-center space-x-2 cursor-pointer">
+                        <span>Save & Submit Profile</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Live Image Preview
+    const photoInput = document.getElementById('id_profile_photo');
+    const previewImg = document.getElementById('photo-preview-img');
+    const placeholder = document.getElementById('photo-placeholder');
+
+    if (photoInput) {
+        photoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    previewImg.src = evt.target.result;
+                    previewImg.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+</script>
+{% endblock %}

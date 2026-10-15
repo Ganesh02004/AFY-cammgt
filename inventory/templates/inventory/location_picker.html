@@ -1,0 +1,171 @@
+<!-- Reusable Interactive Location Picker Component (Google Maps / Leaflet GPS) -->
+<div class="location-picker-widget space-y-2 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+    <div class="flex items-center justify-between">
+        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center space-x-1.5">
+            <i class="fa-solid fa-map-location-dot text-indigo-600"></i>
+            <span>Pinpoint Location (Interactive Map & GPS)</span>
+        </label>
+        <button type="button" onclick="getCurrentGpsLocation()" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 transition flex items-center space-x-1 text-[11px]">
+            <i class="fa-solid fa-crosshairs text-indigo-600"></i>
+            <span>Use My GPS</span>
+        </button>
+    </div>
+
+    <!-- Address Search & Display -->
+    <div class="flex gap-2">
+        <div class="relative flex-grow">
+            <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400">
+                <i class="fa-solid fa-magnifying-glass text-xs"></i>
+            </span>
+            <input type="text" id="map-search-input" placeholder="Search street, area, or landmark..." class="form-input pl-8 text-xs">
+        </div>
+        <button type="button" onclick="searchAddressOnMap()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-xs">
+            Search
+        </button>
+    </div>
+
+    <!-- Interactive Map Container -->
+    <div id="interactive-map" class="w-full h-48 rounded-xl border border-slate-300 relative overflow-hidden z-10 shadow-inner"></div>
+
+    <!-- Hidden / Readonly Coordinates -->
+    <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+        <span>Latitude: <strong id="lat-display" class="font-mono text-slate-700">—</strong></span>
+        <span>Longitude: <strong id="lng-display" class="font-mono text-slate-700">—</strong></span>
+        <span class="text-[10px] text-indigo-600 font-medium"><i class="fa-solid fa-hand-pointer mr-0.5"></i> Click or drag pin to adjust</span>
+    </div>
+</div>
+
+<!-- Leaflet CSS & JS for 100% reliable interactive map display -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    let map = null;
+    let marker = null;
+
+    // Default center: India (approx 20.5937, 78.9629) or New Delhi (28.6139, 77.2090)
+    let currentLat = 28.6139;
+    let currentLng = 77.2090;
+
+    function initMap() {
+        const mapContainer = document.getElementById('interactive-map');
+        if (!mapContainer || map !== null) return;
+
+        // Check if pre-existing coordinates exist in hidden inputs
+        const latInput = document.getElementById('id_latitude');
+        const lngInput = document.getElementById('id_longitude');
+        if (latInput && latInput.value && lngInput && lngInput.value) {
+            currentLat = parseFloat(latInput.value);
+            currentLng = parseFloat(lngInput.value);
+        }
+
+        map = L.map('interactive-map').setView([currentLat, currentLng], 13);
+
+        // Use reliable CartoDB Voyager tiles (never blocked on localhost, fast CDN)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20,
+            subdomains: 'abcd',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
+        }).addTo(map);
+
+        marker = L.marker([currentLat, currentLng], { draggable: true }).addTo(map);
+
+        marker.on('dragend', function (e) {
+            const position = marker.getLatLng();
+            updateLocationFields(position.lat, position.lng, true);
+        });
+
+        map.on('click', function (e) {
+            marker.setLatLng(e.latlng);
+            updateLocationFields(e.latlng.lat, e.latlng.lng, true);
+        });
+
+        updateLocationFields(currentLat, currentLng, false);
+
+        // Fix Leaflet tile rendering within flex containers
+        setTimeout(() => { map.invalidateSize(); }, 300);
+    }
+
+    function updateLocationFields(lat, lng, doReverseGeocode) {
+        document.getElementById('lat-display').textContent = lat.toFixed(5);
+        document.getElementById('lng-display').textContent = lng.toFixed(5);
+
+        const latInput = document.getElementById('id_latitude');
+        const lngInput = document.getElementById('id_longitude');
+        if (latInput) latInput.value = lat.toFixed(6);
+        if (lngInput) lngInput.value = lng.toFixed(6);
+
+        if (doReverseGeocode) {
+            reverseGeocode(lat, lng);
+        }
+    }
+
+    function reverseGeocode(lat, lng) {
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.display_name) {
+                    const addrInput = document.getElementById('id_location_address') || document.getElementById('id_location');
+                    if (addrInput) addrInput.value = data.display_name;
+                    const searchInput = document.getElementById('map-search-input');
+                    if (searchInput) searchInput.value = data.display_name;
+                }
+            })
+            .catch(err => console.log("Geocode error:", err));
+    }
+
+    function searchAddressOnMap() {
+        const query = document.getElementById('map-search-input').value.trim();
+        if (!query) return;
+
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(results => {
+                if (results && results.length > 0) {
+                    const first = results[0];
+                    const lat = parseFloat(first.lat);
+                    const lon = parseFloat(first.lon);
+                    map.setView([lat, lon], 15);
+                    marker.setLatLng([lat, lon]);
+                    updateLocationFields(lat, lon, false);
+
+                    const addrInput = document.getElementById('id_location_address') || document.getElementById('id_location');
+                    if (addrInput) addrInput.value = first.display_name;
+                } else {
+                    alert("No location found for query: " + query);
+                }
+            })
+            .catch(err => console.log("Search error:", err));
+    }
+
+    function getCurrentGpsLocation() {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser.");
+            return;
+        }
+
+        const btn = event.currentTarget;
+        const origText = btn.innerHTML;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Getting GPS...`;
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                btn.innerHTML = origText;
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                if (map) {
+                    map.setView([lat, lng], 16);
+                    marker.setLatLng([lat, lng]);
+                }
+                updateLocationFields(lat, lng, true);
+            },
+            (err) => {
+                btn.innerHTML = origText;
+                alert("GPS permission denied or unavailable: " + err.message);
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    }
+
+    window.addEventListener('DOMContentLoaded', initMap);
+</script>

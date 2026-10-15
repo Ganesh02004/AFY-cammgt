@@ -1,0 +1,92 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}{{ title }} — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <h1 class="text-xl font-extrabold text-slate-900">{{ title }}</h1>
+        <a href="{% url 'workers_list' %}" class="text-xs font-semibold text-slate-500 hover:text-slate-800">Cancel</a>
+    </div>
+
+    <form method="post" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 text-xs">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Worker ID / Badge # *</label>
+                {{ form.worker_id }}
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name *</label>
+                {{ form.name }}
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Employer Company *</label>
+                {{ form.employer_company }}
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Role / Designation</label>
+                {{ form.role_or_status }}
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Phone Number *</label>
+                {{ form.phone }}
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address</label>
+                {{ form.email }}
+            </div>
+
+            <div class="sm:col-span-2">
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Residential Address</label>
+                {{ form.address }}
+            </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 space-y-3">
+            <h2 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center space-x-1.5">
+                <i class="fa-solid fa-lock text-indigo-600"></i>
+                <span>Sensitive Identity & Financial Info (Masked by Default)</span>
+            </h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Aadhaar Number</label>
+                    {{ form.aadhaar_number }}
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Bank Account Number</label>
+                    {{ form.bank_account_number }}
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Bank IFSC Code</label>
+                    {{ form.bank_ifsc }}
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">UPI ID</label>
+                    {{ form.upi_id }}
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-4">
+            <a href="{% url 'workers_list' %}" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition">
+                Cancel
+            </a>
+            <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center space-x-2 shadow-sm">
+                <i class="fa-solid fa-check text-xs"></i>
+                <span>Save Worker Record</span>
+            </button>
+        </div>
+
+    </form>
+
+</div>
+{% endblock %}

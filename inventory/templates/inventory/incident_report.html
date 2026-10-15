@@ -1,0 +1,60 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Report Incident — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto space-y-6">
+
+    <div class="bg-white p-6 rounded-2xl border border-rose-200 shadow-sm flex items-center justify-between">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Damage / Loss Log</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Report Device Incident</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Report damage, loss, or theft of equipment for immediate quarantine.</p>
+        </div>
+        <a href="{% url 'incident_list' %}" class="text-xs font-semibold text-slate-500 hover:text-slate-800">Cancel</a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 text-xs">
+        {% csrf_token %}
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Impacted Equipment *</label>
+            {{ form.device }}
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Incident Classification *</label>
+            {{ form.incident_type }}
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Detailed Explanation & Circumstances *</label>
+            {{ form.notes }}
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Photo Evidence / Documentation (Optional)</label>
+            {{ form.evidence }}
+        </div>
+
+        <div class="p-4 bg-rose-50 rounded-xl border border-rose-200 text-xs text-rose-800">
+            <strong>Automatic Status Update:</strong> Submitting a Physical Damage report marks the device as 'Damaged'. Reporting a Loss marks it as 'Lost', removing it from active field dispatch.
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3">
+            <a href="{% url 'incident_list' %}" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition">
+                Cancel
+            </a>
+            <button type="submit" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition flex items-center space-x-2 shadow-sm">
+                <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                <span>Submit Incident Report</span>
+            </button>
+        </div>
+
+    </form>
+
+</div>
+{% endblock %}

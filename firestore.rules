@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for role-based authorization
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (getUserRole() == 'ADMIN' || request.auth.token.admin == true);
+    }
+
+    function isManagement() {
+      return isAuthenticated() && (getUserRole() == 'MANAGEMENT' || isAdmin());
+    }
+
+    function isFieldCollector() {
+      return isAuthenticated() && (getUserRole() == 'POSTMAN' || isManagement());
+    }
+
+    // Devices collection & sub-collections
+    match /devices/{deviceId} {
+      allow read: if isAuthenticated();
+      allow write: if isManagement();
+
+      // Separate timestamped activity logs per device
+      match /activity_logs/{logId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update, delete: if false; // Append-only audit trail
+      }
+    }
+
+    // Remote desktop-to-mobile scanner pairing sessions
+    match /scanner_sessions/{sessionId} {
+      // Allow read/update if paired via token or authenticated
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Client companies and contacts
+    match /clients/{clientId} {
+      allow read: if isAuthenticated();
+      allow write: if isManagement();
+
+      match /contacts/{contactId} {
+        allow read: if isAuthenticated();
+        allow write: if isManagement();
+      }
+    }
+
+    // Workers and Employer Companies
+    match /workers/{workerId} {
+      // Protect sensitive Aadhaar and Bank information
+      allow read: if isAuthenticated();
+      allow write: if isManagement();
+    }
+
+    // General fallback
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

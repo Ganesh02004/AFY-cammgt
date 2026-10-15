@@ -1,0 +1,158 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Custody Transfers — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Custody Operations</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Staff Custody Transfers</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Manage and review handovers between collectors, field managers, and warehouse staff.</p>
+        </div>
+
+        <a href="{% url 'my_inventory' %}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-sm">
+            <i class="fa-solid fa-box text-xs"></i>
+            <span>Choose Device to Transfer</span>
+        </a>
+    </div>
+
+    <!-- Section 1: Incoming Pending Transfers -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-amber-50/50">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-inbox text-amber-600"></i>
+                <h2 class="text-sm font-bold text-slate-900">Incoming Transfers Awaiting Your Acceptance ({{ incoming.count }})</h2>
+            </div>
+            <span class="text-xs text-amber-800 font-medium">Verify physical receipt before accepting</span>
+        </div>
+
+        {% if incoming %}
+        <div class="divide-y divide-slate-100">
+            {% for t in incoming %}
+            <div class="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition">
+                <div class="space-y-1 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="font-extrabold font-mono text-slate-900 text-sm">{{ t.device.asset_id }}</span>
+                        <span class="text-slate-600">({{ t.device.brand_and_model }})</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                            {{ t.get_status_display }}
+                        </span>
+                    </div>
+                    <p class="text-slate-500">
+                        Sender: <strong class="text-slate-700">{{ t.sender.display_name }}</strong> &bull; Condition: <strong class="text-slate-700">{{ t.condition }}</strong> &bull; Initiated: {{ t.initiated_at|date:"M d, Y - H:i" }}
+                    </p>
+                    {% if t.notes %}<p class="text-slate-600 italic">"{{ t.notes }}"</p>{% endif %}
+                </div>
+
+                <div class="flex items-center space-x-2 self-end sm:self-center">
+                    <a href="{% url 'transfer_action' t.id 'accept' %}" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Accept Custody</span>
+                    </a>
+                    <a href="{% url 'transfer_action' t.id 'reject' %}" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition">
+                        Reject
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-6 text-center text-slate-400 text-xs">No pending incoming transfer requests.</div>
+        {% endif %}
+    </div>
+
+    <!-- Section 2: Outgoing Transfers In Flight -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-paper-plane text-indigo-600"></i>
+                <h2 class="text-sm font-bold text-slate-900">Outgoing Transfers Sent by You ({{ outgoing.count }})</h2>
+            </div>
+            <span class="text-xs text-slate-400">Custody remains yours until accepted</span>
+        </div>
+
+        {% if outgoing %}
+        <div class="divide-y divide-slate-100">
+            {% for t in outgoing %}
+            <div class="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition">
+                <div class="space-y-1 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="font-extrabold font-mono text-slate-900 text-sm">{{ t.device.asset_id }}</span>
+                        <span class="text-slate-600">({{ t.device.brand_and_model }})</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                            Awaiting Recipient
+                        </span>
+                    </div>
+                    <p class="text-slate-500">
+                        Designated Recipient: <strong class="text-slate-700">{{ t.receiver.display_name }}</strong> &bull; Condition: {{ t.condition }} &bull; Sent: {{ t.initiated_at|date:"M d, H:i" }}
+                    </p>
+                </div>
+
+                <a href="{% url 'transfer_action' t.id 'cancel' %}" class="px-3 py-1.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold transition">
+                    Cancel Transfer
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-6 text-center text-slate-400 text-xs">No pending outgoing transfers.</div>
+        {% endif %}
+    </div>
+
+    <!-- Section 3: Completed / Historical Transfers -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100">
+            <h2 class="text-sm font-bold text-slate-900">Transfer History Log</h2>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold border-b border-slate-100">
+                    <tr>
+                        <th class="py-3 px-4">Date</th>
+                        <th class="py-3 px-4">Device</th>
+                        <th class="py-3 px-4">Sender</th>
+                        <th class="py-3 px-4">Receiver</th>
+                        <th class="py-3 px-4">Final Status</th>
+                        <th class="py-3 px-4">Notes</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for h in history %}
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4 text-slate-500 whitespace-nowrap">{{ h.initiated_at|date:"M d, H:i" }}</td>
+                        <td class="py-3 px-4 font-bold font-mono">
+                            <a href="{% url 'device_detail' h.device.id %}" class="text-indigo-600 hover:underline">
+                                {{ h.device.asset_id }}
+                            </a>
+                        </td>
+                        <td class="py-3 px-4 text-slate-700">{{ h.sender.display_name }}</td>
+                        <td class="py-3 px-4 text-slate-700">{{ h.receiver.display_name }}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold
+                                {% if h.status == 'ACCEPTED' %}bg-emerald-100 text-emerald-800
+                                {% elif h.status == 'REJECTED' %}bg-rose-100 text-rose-800
+                                {% else %}bg-slate-100 text-slate-700{% endif %}">
+                                {{ h.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-slate-500 truncate max-w-[200px]">{{ h.notes|default:'—' }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="p-6 text-center text-slate-400">No transfer history records.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

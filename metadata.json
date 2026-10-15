@@ -1,0 +1,6 @@
+{
+  "name": "CamGuard",
+  "description": "Camera & Device Custody Inventory Portal with QR engine, field tracking, peer transfers, returns inspection queue, and dynamic object field builder.",
+  "permissions": [],
+  "capabilities": []
+}

@@ -1,0 +1,337 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Register New Account — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center py-10 px-4">
+    <div class="max-w-xl w-full bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+
+        <!-- Header -->
+        <div class="bg-gradient-to-br from-indigo-700 via-indigo-600 to-indigo-800 p-8 text-center text-white relative">
+            <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center shadow-inner">
+                <i class="fa-solid fa-user-plus text-2xl text-white"></i>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-black tracking-tight">Staff Account Registration</h1>
+            <p class="text-xs text-indigo-100 font-semibold mt-0.5">AFY Camera Inventory Management</p>
+            <p class="text-[10px] text-indigo-200 mt-1 uppercase tracking-wider">
+                <i class="fa-solid fa-shield-halved mr-1"></i> Admin Approval Required for System Activation
+            </p>
+        </div>
+
+        <div class="p-8 space-y-6">
+
+            <!-- Firebase Google Quick Sign-Up -->
+            <div class="space-y-2">
+                <button type="button" onclick="startGoogleSignUp(false)" id="btn-google-signup" class="w-full py-2.5 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-2 shadow-xs cursor-pointer">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span>Register with Google (Firebase)</span>
+                </button>
+                <button type="button" onclick="startGoogleSignUp(true)" class="w-full py-1.5 px-3 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 text-[11px] font-semibold rounded-xl transition flex items-center justify-center space-x-1.5 border border-slate-200 cursor-pointer">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    <span>Popup issue? Register via Full-Page Google Redirect</span>
+                </button>
+            </div>
+
+            <div class="relative flex items-center justify-center">
+                <div class="border-t border-slate-200 w-full"></div>
+                <span class="bg-white px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 absolute">or fill in registration form</span>
+            </div>
+
+            <!-- Standard Form Errors -->
+            {% if form.errors %}
+            <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 space-y-1">
+                <strong class="font-bold flex items-center"><i class="fa-solid fa-circle-exclamation mr-1.5"></i> Please correct the following errors:</strong>
+                <ul class="list-disc list-inside space-y-0.5 text-[11px] pt-1">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Registration Form -->
+            <form method="post" id="registration-form" onsubmit="return handleEmailPasswordRegister(event);" class="space-y-4 text-xs">
+                {% csrf_token %}
+
+                <!-- Name Fields -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">First Name *</label>
+                        {{ form.first_name }}
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Last Name *</label>
+                        {{ form.last_name }}
+                    </div>
+                </div>
+
+                <!-- Username & Email -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Username *</label>
+                        {{ form.username }}
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Email Address *</label>
+                        {{ form.email }}
+                    </div>
+                </div>
+
+                <!-- Mobile Phone -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Mobile Number (Indian 10-Digit) *</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">+91</span>
+                        <input type="tel" name="phone" id="id_phone" required pattern="[6-9][0-9]{9}" maxlength="10" placeholder="e.g. 9876543210" value="{{ form.phone.value|default:'' }}" class="form-input pl-11 font-mono text-xs">
+                    </div>
+                    <span class="text-[10px] text-slate-400 mt-0.5 block">10 digits starting with 6, 7, 8, or 9 (no +91 or 0 prefix needed)</span>
+                </div>
+
+                <!-- 2 Option Role Selection -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Operational Role Requested *</label>
+                    {{ form.role }}
+                    <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-500">
+                        <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                            <strong class="text-slate-800 block text-xs mb-0.5"><i class="fa-solid fa-briefcase text-blue-600 mr-1"></i> Management User</strong>
+                            Oversees master inventory, schedules dispatches, reviews audits, and finalizes returns.
+                        </div>
+                        <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                            <strong class="text-slate-800 block text-xs mb-0.5"><i class="fa-solid fa-truck-fast text-emerald-600 mr-1"></i> Postman / Field Staff</strong>
+                            Executes physical pickups from clients, hands over cameras to workers, and collects returns.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Passwords -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Password *</label>
+                        {{ form.password }}
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Confirm Password *</label>
+                        {{ form.confirm_password }}
+                    </div>
+                </div>
+
+                <!-- Admin Approval Protocol Warning -->
+                <div class="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-[11px] text-amber-900 space-y-1">
+                    <p class="font-bold flex items-center">
+                        <i class="fa-solid fa-shield-halved text-amber-600 mr-1.5"></i> Custody Security Protocol
+                    </p>
+                    <p class="text-amber-800">
+                        After submitting this form, your account will be set to <strong>Inactive</strong>. You will be able to log in immediately after a system administrator reviews and activates your account.
+                    </p>
+                </div>
+
+                <button type="submit" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-indigo-100 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-user-check"></i>
+                    <span>Submit Registration for Admin Approval</span>
+                </button>
+            </form>
+
+            <div class="pt-2 text-center text-xs text-slate-500">
+                Already have an approved account?
+                <a href="{% url 'login' %}" class="font-bold text-indigo-600 hover:text-indigo-800 ml-1">Sign In</a>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal for Google Sign-Up Role & Phone Selection -->
+<div id="google-profile-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 border border-slate-200 text-xs">
+        <div class="text-center space-y-1 border-b border-slate-100 pb-3">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto text-xl">
+                <i class="fa-brands fa-google"></i>
+            </div>
+            <h2 class="text-base font-extrabold text-slate-900 mt-2">Complete Google Registration</h2>
+            <p id="google-user-greeting" class="text-xs text-slate-500">Select your role and phone to request access</p>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Select Your Role *</label>
+                <select id="google-role-select" class="form-select text-xs">
+                    <option value="POSTMAN">Postman / Field Collector (Pickups & Returns)</option>
+                    <option value="MANAGEMENT">Management User (Inventory Oversight & Audits)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Mobile Number (Indian 10-Digit) *</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">+91</span>
+                    <input type="tel" id="google-phone-input" required pattern="[6-9][0-9]{9}" maxlength="10" placeholder="e.g. 9876543210" class="form-input pl-11 font-mono text-xs">
+                </div>
+            </div>
+
+            <div id="google-modal-status" class="hidden text-[11px] p-2.5 rounded-xl"></div>
+
+            <div class="flex items-center justify-end space-x-2 pt-2">
+                <button type="button" onclick="closeGoogleModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 font-bold hover:bg-slate-50">Cancel</button>
+                <button type="button" onclick="submitGoogleRegistration()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center space-x-1.5 shadow-sm">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Submit for Approval</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let pendingGoogleIdToken = null;
+
+    function handleEmailPasswordRegister(event) {
+        if (typeof firebase === 'undefined' || !firebase.auth) {
+            return true;
+        }
+
+        const emailEl = document.getElementById('id_email');
+        const passEl = document.getElementById('id_password');
+        const confirmEl = document.getElementById('id_confirm_password');
+
+        const email = emailEl ? emailEl.value.trim() : '';
+        const password = passEl ? passEl.value : '';
+        const confirmPassword = confirmEl ? confirmEl.value : '';
+
+        if (!email || !password) {
+            return true;
+        }
+
+        if (password !== confirmPassword) {
+            alert("Passwords do not match. Please verify.");
+            return false;
+        }
+
+        event.preventDefault();
+        const form = document.getElementById('registration-form');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Registering in Firebase Authentication...';
+        }
+
+        // Create user directly in Firebase Authentication
+        firebase.auth().createUserWithEmailAndPassword(email, password)
+            .then(userCred => {
+                userCred.user.sendEmailVerification().catch(e => console.log("Email verification link notice:", e));
+                return userCred.user.getIdToken();
+            })
+            .then(idToken => {
+                let tokenInput = document.getElementById('id_firebase_token');
+                if (!tokenInput) {
+                    tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.id = 'id_firebase_token';
+                    tokenInput.name = 'firebase_token';
+                    form.appendChild(tokenInput);
+                }
+                tokenInput.value = idToken;
+                form.submit();
+            })
+            .catch(err => {
+                console.error("Firebase Auth Registration:", err);
+                if (err.code === 'auth/email-already-in-use') {
+                    alert("This email address is already registered in Firebase Authentication. Please sign in instead.");
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fa-solid fa-user-check mr-1"></i> Submit Registration for Admin Approval';
+                    }
+                } else if (err.code === 'auth/operation-not-allowed') {
+                    console.warn("Email/Password provider disabled in Firebase Console, continuing with local signup.");
+                    form.submit();
+                } else {
+                    console.warn("Firebase client registration notice:", err.message);
+                    form.submit();
+                }
+            });
+        return false;
+    }
+
+    function startGoogleSignUp(useRedirect = false) {
+        if (typeof firebase === 'undefined' || !firebase.auth) {
+            alert("Firebase library is still initializing. Please check your internet connection.");
+            return;
+        }
+
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+
+        if (useRedirect) {
+            firebase.auth().signInWithRedirect(provider);
+            return;
+        }
+
+        firebase.auth().signInWithPopup(provider)
+            .then(result => processGoogleUser(result.user))
+            .catch(err => {
+                console.error("Google Auth error:", err);
+                if (err.code === 'auth/unauthorized-domain') {
+                    alert("Domain not authorized in Firebase Console: Please open http://localhost:8000/register/ or add " + window.location.hostname + " in Firebase Console > Authentication > Settings > Authorized Domains.");
+                } else if (err.code === 'auth/operation-not-allowed') {
+                    alert("Google Sign-In is disabled in Firebase Console. Please go to Firebase Console > Authentication > Sign-in method, click Google, and enable it.");
+                } else if (err.code === 'auth/popup-blocked') {
+                    alert("Popup blocked by browser. Continuing with redirect mode...");
+                    firebase.auth().signInWithRedirect(provider);
+                } else if (err.code === 'auth/popup-closed-by-user') {
+                    const tryRedirect = confirm("The Google sign-in popup was interrupted or closed by browser policies. Would you like to use Full-Page Google Sign-In instead?");
+                    if (tryRedirect) {
+                        startGoogleSignUp(true);
+                    }
+                } else {
+                    alert("Google Sign-In notice (" + err.code + "): " + err.message);
+                }
+            });
+    }
+
+    function processGoogleUser(firebaseUser) {
+        firebaseUser.getIdToken().then(idToken => {
+            return fetch("{% url 'firebase_login_api' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken: idToken })
+            });
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.needs_profile_completion) {
+                window.location.href = data.redirectUrl || '/complete-profile/';
+            } else if (data.pending_approval) {
+                window.location.href = data.redirectUrl || '/pending-approval/';
+            } else if (data.success) {
+                window.location.href = data.redirectUrl || '/dashboard/';
+            } else {
+                alert(data.error || "Authentication could not be completed.");
+            }
+        });
+    }
+
+    // Check for redirect return
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+            firebase.auth().getRedirectResult()
+                .then(result => {
+                    if (result && result.user) {
+                        processGoogleUser(result.user);
+                    }
+                })
+                .catch(err => console.log("Redirect result note:", err));
+        }
+    });
+
+    function closeGoogleModal() {
+        document.getElementById('google-profile-modal').classList.add('hidden');
+    }
+</script>
+{% endblock %}

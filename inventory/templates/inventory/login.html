@@ -1,0 +1,342 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Sign In — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="min-h-[75vh] flex items-center justify-center py-10 px-4">
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-gradient-to-br from-indigo-700 via-indigo-600 to-indigo-800 p-8 text-center text-white relative">
+            <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center shadow-inner">
+                <i class="fa-solid fa-camera-retro text-2xl text-white"></i>
+            </div>
+            <h1 class="text-xl font-black tracking-tight">AFY</h1>
+            <p class="text-xs text-indigo-100 font-semibold mt-0.5">(Any Thing For You) Camera Inventory Management</p>
+            <p class="text-[10px] text-indigo-200 mt-1 uppercase tracking-wider">
+                <i class="fa-solid fa-fire mr-1 text-amber-300"></i> Secured by Firebase Authentication
+            </p>
+        </div>
+
+        <div class="p-6 sm:p-8 space-y-5">
+
+            <!-- Session Expiration Banner -->
+            {% if session_expired or request.GET.expired == '1' %}
+            <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs flex items-start space-x-2.5">
+                <i class="fa-solid fa-clock-rotate-left text-amber-600 mt-0.5 text-sm shrink-0"></i>
+                <div>
+                    <strong class="font-bold">Session Timed Out:</strong>
+                    <p class="text-[11px] text-amber-800 mt-0.5">Your application session expired after 5 minutes of inactivity. Please sign in again to resume.</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Firebase Status Alert Box -->
+            <div id="firebase-status" class="hidden text-xs rounded-2xl p-3.5 border transition-all"></div>
+
+            <!-- Option 1: Continue with Google -->
+            <div class="space-y-2">
+                <button type="button" onclick="signInWithGoogleFirebase(false)" id="btn-google-login" class="w-full py-3 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-2xl text-xs transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span>Continue with Google</span>
+                </button>
+                <button type="button" onclick="signInWithGoogleFirebase(true)" class="w-full py-1.5 px-3 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 text-[11px] font-semibold rounded-xl transition flex items-center justify-center space-x-1.5 border border-slate-200 cursor-pointer">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    <span>Popup blocked? Use Full-Page Google Sign-In</span>
+                </button>
+            </div>
+
+            <!-- Divider -->
+            <div class="relative flex items-center justify-center my-2">
+                <div class="border-t border-slate-200 w-full"></div>
+                <span class="bg-white px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 absolute">or with email & password</span>
+            </div>
+
+            <!-- Option 2: Continue with Email and Password -->
+            <form id="login-form" method="post" onsubmit="handleEmailPasswordLogin(event)" class="space-y-4 text-xs">
+                {% csrf_token %}
+                
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Email or Username</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                            <i class="fa-solid fa-envelope text-xs"></i>
+                        </span>
+                        <input type="text" name="username" id="login-email" required class="form-input pl-9 text-xs" placeholder="name@company.com or username">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase">Password</label>
+                        <button type="button" onclick="openForgotPasswordModal()" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800">
+                            Forgot password?
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                            <i class="fa-solid fa-lock text-xs"></i>
+                        </span>
+                        <input type="password" name="password" id="login-password" required class="form-input pl-9 text-xs" placeholder="Enter your password">
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-submit-login" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition shadow-md shadow-indigo-100 flex items-center justify-center space-x-2 cursor-pointer">
+                    <span id="btn-login-text">Sign In with Email</span>
+                    <i class="fa-solid fa-arrow-right text-xs" id="btn-login-icon"></i>
+                </button>
+            </form>
+
+            <!-- Registration Footer -->
+            <div class="pt-4 text-center text-xs text-slate-500 border-t border-slate-100">
+                New staff member?
+                <a href="{% url 'register' %}" class="font-bold text-indigo-600 hover:text-indigo-800 ml-1">Create Staff Account &rarr;</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div id="forgot-password-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 border border-slate-200 text-xs">
+        <div class="flex items-center space-x-3 text-indigo-600 border-b border-slate-100 pb-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg shrink-0">
+                <i class="fa-solid fa-key"></i>
+            </div>
+            <div>
+                <h3 class="text-sm font-extrabold text-slate-900">Reset Password</h3>
+                <p class="text-[11px] text-slate-500">Firebase Email Password Recovery</p>
+            </div>
+        </div>
+
+        <p class="text-[11px] text-slate-600 leading-relaxed">
+            Enter your registered email address below. We'll send a secure password reset link directly through Firebase.
+        </p>
+
+        <div class="space-y-1">
+            <label class="block text-[11px] font-bold text-slate-700 uppercase">Your Email Address</label>
+            <input type="email" id="reset-email-input" placeholder="e.g. name@company.com" class="form-input text-xs">
+        </div>
+
+        <div id="reset-status" class="hidden text-[11px] p-2.5 rounded-xl"></div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+            <button type="button" onclick="closeForgotPasswordModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition cursor-pointer">
+                Cancel
+            </button>
+            <button type="button" onclick="sendFirebasePasswordReset()" id="btn-send-reset" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-md shadow-indigo-100 flex items-center space-x-1.5 cursor-pointer">
+                <i class="fa-solid fa-paper-plane text-xs"></i>
+                <span>Send Reset Link</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showStatus(message, type = 'info') {
+        const el = document.getElementById('firebase-status');
+        el.classList.remove('hidden', 'bg-indigo-50', 'border-indigo-200', 'text-indigo-800', 'bg-rose-50', 'border-rose-200', 'text-rose-700', 'bg-amber-50', 'border-amber-200', 'text-amber-800', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-800');
+        
+        if (type === 'error') {
+            el.classList.add('bg-rose-50', 'border-rose-200', 'text-rose-700');
+        } else if (type === 'warning') {
+            el.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-800');
+        } else if (type === 'success') {
+            el.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-800');
+        } else {
+            el.classList.add('bg-indigo-50', 'border-indigo-200', 'text-indigo-800');
+        }
+        el.innerHTML = message;
+    }
+
+    // Google Sign-In via Firebase
+    function signInWithGoogleFirebase(useRedirect = false) {
+        if (typeof firebase === 'undefined' || !firebase.auth) {
+            alert("Firebase library is still initializing. Please check your internet connection.");
+            return;
+        }
+
+        showStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Connecting to Google Authentication...', 'info');
+
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+
+        if (useRedirect) {
+            firebase.auth().signInWithRedirect(provider);
+            return;
+        }
+
+        firebase.auth().signInWithPopup(provider)
+            .then(result => processFirebaseUserToken(result.user))
+            .catch(err => {
+                console.error("Firebase Auth Error:", err);
+                if (err.code === 'auth/unauthorized-domain') {
+                    showStatus(
+                        '<strong><i class="fa-solid fa-triangle-exclamation mr-1 text-rose-600"></i> Domain Not Authorized:</strong><br>' +
+                        'Your browser is accessing this app from <code>' + window.location.hostname + '</code>, which is not in Firebase authorized domains.<br>' +
+                        '👉 Access the app via <strong><a href="http://localhost:8000/login/" class="underline font-bold text-indigo-600">http://localhost:8000</a></strong>, or add <code>' + window.location.hostname + '</code> in Firebase Console ➔ Authentication ➔ Settings ➔ Authorized Domains.',
+                        'error'
+                    );
+                } else if (err.code === 'auth/operation-not-allowed') {
+                    showStatus(
+                        '<strong><i class="fa-solid fa-triangle-exclamation mr-1 text-rose-600"></i> Google Sign-In Disabled:</strong><br>' +
+                        'Google sign-in is disabled in your Firebase project.<br>' +
+                        '👉 Go to Firebase Console ➔ <strong>Authentication</strong> ➔ <strong>Sign-in method</strong> ➔ Click <strong>Google</strong> and toggle <strong>Enable</strong>.',
+                        'error'
+                    );
+                } else if (err.code === 'auth/popup-blocked') {
+                    showStatus(
+                        '<strong><i class="fa-solid fa-window-restore mr-1 text-amber-600"></i> Popup Blocked:</strong><br>' +
+                        'Your browser blocked the Google login popup. <button onclick="signInWithGoogleFirebase(true)" class="underline font-bold text-indigo-600">Click here to continue with redirect</button>.',
+                        'warning'
+                    );
+                } else if (err.code === 'auth/popup-closed-by-user') {
+                    showStatus(
+                        '<strong><i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> Google Sign-In Popup Interrupted:</strong><br>' +
+                        'The login popup closed before finishing. This typically occurs when browsers (Safari / Chrome) block cross-origin popup storage.<br>' +
+                        '<div class="mt-2.5">' +
+                        '<button type="button" onclick="signInWithGoogleFirebase(true)" class="py-2 px-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold inline-flex items-center space-x-1.5 shadow-sm cursor-pointer">' +
+                        '<i class="fa-solid fa-arrow-up-right-from-square text-xs"></i><span>Continue with Full-Page Google Sign-In</span>' +
+                        '</button>' +
+                        '</div>',
+                        'warning'
+                    );
+                } else {
+                    showStatus(`Authentication Notice (${err.code}): ${err.message || 'Unable to connect to Firebase.'}`, 'error');
+                }
+            });
+    }
+
+    function processFirebaseUserToken(firebaseUser) {
+        showStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Authenticated (' + firebaseUser.email + '). Verifying backend session...', 'info');
+        return firebaseUser.getIdToken()
+            .then(idToken => {
+                return fetch("{% url 'firebase_login_api' %}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idToken: idToken })
+                });
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('<i class="fa-solid fa-check mr-1.5 text-emerald-600"></i> Welcome! Redirecting...', 'success');
+                    window.location.href = data.redirectUrl || '/dashboard/';
+                } else if (data.pending_approval) {
+                    window.location.href = data.redirectUrl || '/pending-approval/';
+                } else if (data.needs_profile_completion) {
+                    window.location.href = data.redirectUrl || '/complete-profile/';
+                } else {
+                    showStatus(data.error || 'Login verification failed.', 'error');
+                }
+            });
+    }
+
+    // Check for redirect result on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+            firebase.auth().getRedirectResult()
+                .then(result => {
+                    if (result && result.user) {
+                        processFirebaseUserToken(result.user);
+                    }
+                })
+                .catch(err => {
+                    console.log("Redirect result note:", err);
+                });
+        }
+    });
+
+    // Email & Password Login via Firebase Auth (with fallback to Django)
+    function handleEmailPasswordLogin(event) {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+
+        // If email contains @, try Firebase Email Auth first
+        if (typeof firebase !== 'undefined' && firebase.auth && email.includes('@')) {
+            event.preventDefault();
+            const btn = document.getElementById('btn-submit-login');
+            btn.disabled = true;
+            showStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Verifying credentials with Firebase...', 'info');
+
+            firebase.auth().signInWithEmailAndPassword(email, password)
+                .then(userCred => {
+                    return userCred.user.getIdToken();
+                })
+                .then(idToken => {
+                    return fetch("{% url 'firebase_login_api' %}", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ idToken: idToken })
+                    });
+                })
+                .then(res => res.json())
+                .then(data => {
+                    btn.disabled = false;
+                    if (data.success) {
+                        showStatus('<i class="fa-solid fa-check mr-1.5 text-emerald-600"></i> Success! Redirecting...', 'success');
+                        window.location.href = data.redirectUrl || '/dashboard/';
+                    } else if (data.pending_approval) {
+                        window.location.href = data.redirectUrl || '/pending-approval/';
+                    } else if (data.needs_profile_completion) {
+                        window.location.href = data.redirectUrl || '/complete-profile/';
+                    } else {
+                        showStatus(data.error || 'Authentication rejected.', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.log("Firebase direct auth failed, falling back to Django local auth:", err.code);
+                    // If user does not exist in Firebase or credentials mismatch in Firebase,
+                    // submit directly to standard Django login form (handles local admin accounts)
+                    document.getElementById('login-form').submit();
+                });
+        }
+        // If username or no @, default form submit runs to Django view
+    }
+
+    // Password Reset
+    function openForgotPasswordModal() {
+        const modal = document.getElementById('forgot-password-modal');
+        const emailInput = document.getElementById('reset-email-input');
+        emailInput.value = document.getElementById('login-email').value.trim();
+        modal.classList.remove('hidden');
+    }
+    function closeForgotPasswordModal() {
+        document.getElementById('forgot-password-modal').classList.add('hidden');
+    }
+    function sendFirebasePasswordReset() {
+        const email = document.getElementById('reset-email-input').value.trim();
+        const status = document.getElementById('reset-status');
+        if (!email) {
+            status.className = 'text-[11px] p-2.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 block';
+            status.textContent = 'Please enter your email address.';
+            return;
+        }
+
+        if (typeof firebase === 'undefined' || !firebase.auth) {
+            status.className = 'text-[11px] p-2.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 block';
+            status.textContent = 'Firebase is not initialized yet. Please try in a moment.';
+            return;
+        }
+
+        status.className = 'text-[11px] p-2.5 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 block';
+        status.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sending reset email...';
+
+        firebase.auth().sendPasswordResetEmail(email)
+            .then(() => {
+                status.className = 'text-[11px] p-2.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 block';
+                status.innerHTML = '<i class="fa-solid fa-check mr-1 text-emerald-600"></i> Password reset email sent! Check your inbox.';
+            })
+            .catch(err => {
+                status.className = 'text-[11px] p-2.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 block';
+                status.textContent = `Error: ${err.message}`;
+            });
+    }
+</script>
+{% endblock %}

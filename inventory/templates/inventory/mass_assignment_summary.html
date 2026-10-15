@@ -1,0 +1,165 @@
+{% extends 'inventory/base.html' %}
+{% load inventory_tags %}
+
+{% block title %}Batch Summary #{{ batch.batch_id }} | {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <!-- Breadcrumb -->
+    <div class="flex items-center justify-between text-xs text-slate-500">
+        <a href="{% url 'mass_camera_assignment' %}" class="inline-flex items-center space-x-1 hover:text-indigo-600 font-semibold transition">
+            <i class="fa-solid fa-arrow-left mr-1"></i>
+            <span>Back to Mass Assignment Studio</span>
+        </a>
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'mass_assignment_export_csv' batch_id=batch.batch_id %}" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center space-x-1.5 transition shadow-sm text-xs">
+                <i class="fa-solid fa-file-arrow-down"></i>
+                <span>Download CSV Audit Report</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Batch Summary Banner -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl space-y-6">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+            <div class="flex items-center space-x-3.5">
+                <div class="w-12 h-12 rounded-2xl {% if batch.status == 'COMPLETED' %}bg-emerald-50 text-emerald-600{% elif batch.status == 'PARTIAL' %}bg-amber-50 text-amber-600{% else %}bg-rose-50 text-rose-600{% endif %} flex items-center justify-center text-xl shadow-inner shrink-0">
+                    <i class="fa-solid {% if batch.status == 'COMPLETED' %}fa-circle-check{% elif batch.status == 'PARTIAL' %}fa-triangle-exclamation{% else %}fa-circle-xmark{% endif %}"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2.5">
+                        <h1 class="text-xl sm:text-2xl font-black text-slate-900">Batch Assignment Outcome</h1>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold 
+                            {% if batch.status == 'COMPLETED' %}bg-emerald-100 text-emerald-800 border border-emerald-200
+                            {% elif batch.status == 'PARTIAL' %}bg-amber-100 text-amber-800 border border-amber-200
+                            {% else %}bg-rose-100 text-rose-800 border border-rose-200{% endif %}">
+                            {{ batch.get_status_display }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1 font-mono">
+                        Batch ID: <strong>{{ batch.batch_id }}</strong> &bull; Executed by {{ batch.actor.display_name }} on {{ batch.created_at|date:"M d, Y H:i" }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'master_inventory' %}" class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-warehouse text-slate-500"></i>
+                    <span>Master Inventory</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Metric Badges -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <p class="text-[10px] font-bold uppercase text-slate-400">Total Devices Handled</p>
+                <p class="text-2xl font-black text-slate-800 mt-1">{{ batch.total_devices }}</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100">
+                <p class="text-[10px] font-bold uppercase text-emerald-600">Assigned Successfully</p>
+                <p class="text-2xl font-black text-emerald-700 mt-1">{{ batch.successful_assignments }}</p>
+            </div>
+            <div class="p-4 rounded-2xl {% if batch.failed_assignments > 0 %}bg-rose-50/60 border border-rose-100{% else %}bg-slate-50 border border-slate-100{% endif %}">
+                <p class="text-[10px] font-bold uppercase {% if batch.failed_assignments > 0 %}text-rose-600{% else %}text-slate-400{% endif %}">Failed / Exceptions</p>
+                <p class="text-2xl font-black {% if batch.failed_assignments > 0 %}text-rose-700{% else %}text-slate-500{% endif %} mt-1">{{ batch.failed_assignments }}</p>
+            </div>
+        </div>
+
+        {% if batch.notes %}
+        <div class="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs">
+            <p class="font-bold text-slate-700 mb-0.5">Execution Notes:</p>
+            <p class="text-slate-600">{{ batch.notes }}</p>
+        </div>
+        {% endif %}
+
+        {% if batch.custom_fields %}
+        <div class="p-4 bg-purple-50/50 border border-purple-100 rounded-2xl text-xs space-y-1">
+            <p class="font-bold text-purple-900 mb-1 flex items-center">
+                <i class="fa-solid fa-shapes text-purple-600 mr-1.5"></i> Custom Batch Attributes:
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                {% for k, v in batch.custom_fields.items %}
+                <div>
+                    <span class="text-slate-500 font-bold uppercase">{{ k }}:</span>
+                    <span class="text-slate-800 font-semibold ml-1">{{ v }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Individual Device Assignment Audit Table -->
+        <div class="space-y-3">
+            <h3 class="text-sm font-bold text-slate-900 flex items-center">
+                <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>
+                Per-Device Execution Audit
+            </h3>
+
+            <div class="border border-slate-200 rounded-2xl overflow-hidden">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200">
+                        <tr>
+                            <th class="py-3 px-4">Asset ID</th>
+                            <th class="py-3 px-4">Device Model</th>
+                            <th class="py-3 px-4">Result</th>
+                            <th class="py-3 px-4">Details / Exception Reason</th>
+                            <th class="py-3 px-4 text-right">Assignment ID</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for row in batch.summary_report %}
+                        <tr class="hover:bg-slate-50/70 transition">
+                            <td class="py-3 px-4 font-mono font-bold text-slate-900">{{ row.asset_id }}</td>
+                            <td class="py-3 px-4 text-slate-700">{{ row.brand_and_model|default:'&mdash;' }}</td>
+                            <td class="py-3 px-4">
+                                {% if row.success %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                    <i class="fa-solid fa-check mr-1 text-[9px]"></i> Assigned
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+                                    <i class="fa-solid fa-xmark mr-1 text-[9px]"></i> Skipped
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-slate-600 text-[11px]">{{ row.reason }}</td>
+                            <td class="py-3 px-4 text-right font-mono text-slate-500">
+                                {% if row.assignment_id %}
+                                #{{ row.assignment_id }}
+                                {% else %}
+                                &mdash;
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="py-6 text-center text-xs text-slate-400">
+                                No device records logged in this batch.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <span class="text-slate-400 text-[11px]">
+                Immutable custody ledger updated. Every assigned camera now reflects its active worker custodian.
+            </span>
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'mass_camera_assignment' %}" class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center space-x-1.5 shadow-sm">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>Execute Another Batch</span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

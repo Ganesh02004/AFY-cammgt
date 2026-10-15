@@ -1,0 +1,119 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Assign Device to Worker — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Handover Operation</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Assign Device to Worker</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Transfer physical custody of camera/equipment to a registered worker.</p>
+        </div>
+        <a href="{% url 'my_inventory' %}" class="text-xs font-semibold text-slate-500 hover:text-slate-800">Cancel</a>
+    </div>
+
+    <form method="post" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+        {% csrf_token %}
+
+        <!-- Device Selection / Summary -->
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Equipment / Physical Device *</label>
+            {% if device %}
+                <input type="hidden" name="device_id" value="{{ device.id }}">
+                <div class="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-indigo-950 font-mono text-sm">{{ device.asset_id }}</span>
+                        <span class="text-xs text-slate-600 block">{{ device.brand_and_model }} ({{ device.get_device_type_display }})</span>
+                        <span class="text-[10px] text-slate-500 font-mono">SN: {{ device.imei_or_serial|default:'N/A' }}</span>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white text-indigo-700 border border-indigo-200 shadow-2xs">
+                        In Your Custody
+                    </span>
+                </div>
+            {% else %}
+                <select name="device_id" required class="form-select">
+                    <option value="">-- Choose eligible device from your custody --</option>
+                    {% for d in eligible_devices %}
+                    <option value="{{ d.id }}">{{ d.asset_id }} &mdash; {{ d.brand_and_model }} ({{ d.custodian_display }})</option>
+                    {% empty %}
+                    <option disabled value="">No eligible devices currently in your custody. Intake or transfer first.</option>
+                    {% endfor %}
+                </select>
+            {% endif %}
+        </div>
+
+        <!-- Worker Selection -->
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Assigned Worker (Recipient) *</label>
+            {{ form.worker }}
+            <p class="text-[11px] text-slate-400 mt-1">Select the verified worker receiving physical custody.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Condition at Handover</label>
+                {{ form.condition }}
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Expected Return Date</label>
+                {{ form.expected_return_date }}
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Accessories Handed Over</label>
+            {{ form.accessories }}
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Worker Acknowledgement Confirmation *</label>
+            {{ form.acknowledgement }}
+            <p class="text-[11px] text-slate-400 mt-1">Record verbal confirmation or signature receipt notation.</p>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Handover Notes / Instructions</label>
+            {{ form.notes }}
+        </div>
+
+        <!-- Dynamic Handover Location Selection -->
+        <div class="space-y-3 pt-2 border-t border-slate-100">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Handover Location (GPS & Address)</label>
+            {{ form.latitude }}
+            {{ form.longitude }}
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">Handover Street / Office Address</label>
+                {{ form.location_address }}
+            </div>
+            {% include 'inventory/location_picker.html' %}
+        </div>
+
+        <!-- Security Rule Warning -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-start space-x-2.5">
+            <i class="fa-solid fa-lock text-indigo-600 mt-0.5"></i>
+            <div>
+                <span class="font-bold text-slate-800">Double-Assignment Protection Active:</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">Once confirmed, this device will be removed from your personal custody and bound to the worker. It remains visible in the Company Master Inventory.</p>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3">
+            <a href="{% url 'my_inventory' %}" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition">
+                Cancel
+            </a>
+            <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm">
+                <i class="fa-solid fa-check"></i>
+                <span>Confirm Handover & Update Custody</span>
+            </button>
+        </div>
+
+    </form>
+
+</div>
+{% endblock %}

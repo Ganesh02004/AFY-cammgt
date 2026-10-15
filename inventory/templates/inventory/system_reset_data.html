@@ -1,0 +1,198 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Danger Zone: System Data Purge — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-6">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center space-x-2 text-xs text-slate-500 mb-6">
+        <a href="{% url 'dashboard' %}" class="hover:text-indigo-600">Dashboard</a>
+        <span>/</span>
+        <a href="{% url 'user_management' %}" class="hover:text-indigo-600">Admin Management</a>
+        <span>/</span>
+        <span class="text-rose-600 font-semibold">Data Purge & Factory Reset</span>
+    </nav>
+
+    <!-- Danger Zone Alert Banner -->
+    <div class="bg-rose-50 border-2 border-rose-300 rounded-3xl p-6 sm:p-8 mb-8 text-rose-900 shadow-md">
+        <div class="flex items-start space-x-4">
+            <div class="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shrink-0 shadow-lg shadow-rose-200">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="space-y-1">
+                <h1 class="text-xl sm:text-2xl font-black text-rose-900 tracking-tight">Danger Zone: System Data Purge</h1>
+                <p class="text-xs sm:text-sm text-rose-800 leading-relaxed">
+                    This utility permanently deletes records from the database and deletes associated QR codes and photos from server storage.
+                    <strong>This action cannot be undone.</strong> Please review the existing live records below before proceeding.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live System Counts Grid -->
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 mb-8">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+            <h2 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center space-x-2">
+                <i class="fa-solid fa-database text-slate-400"></i>
+                <span>Current Database Record Footprint</span>
+            </h2>
+            <span class="text-[11px] font-semibold text-slate-400">Live Database Summary</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 text-center">
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-xl font-black text-slate-900">{{ counts.devices }}</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Devices</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-xl font-black text-slate-900">{{ counts.pickups }}</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Pickups</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-xl font-black text-slate-900">{{ counts.assignments }}</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Assignments</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-xl font-black text-slate-900">{{ counts.transfers }}</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Transfers</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-xl font-black text-slate-900">{{ counts.returns }}</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Returns</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-xl font-black text-slate-900">{{ counts.movements }}</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Movements</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-xl font-black text-slate-900">{{ counts.logs }}</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Activity Logs</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-xl font-black text-slate-900">{{ counts.incidents }}</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Incidents</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-xl font-black text-slate-900">{{ counts.tasks }}</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Tasks</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-xl font-black text-slate-900">{{ counts.clients }}</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Clients</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-xl font-black text-slate-900">{{ counts.workers }}</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Workers</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-xl font-black text-slate-900">{{ counts.users }}</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Other Users</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Purge Authorization Form -->
+    <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+        <div class="bg-slate-900 p-6 text-white flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-bold">Purge Authorization & Confirmation</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Administrator authorization required to execute destructive operation</p>
+            </div>
+            <span class="px-3 py-1 rounded-full text-[11px] font-extrabold bg-rose-950 text-rose-300 border border-rose-800">
+                <i class="fa-solid fa-lock mr-1"></i> Root Required
+            </span>
+        </div>
+
+        <div class="p-6 sm:p-8 space-y-6">
+            <!-- Form Errors -->
+            {% if form.errors %}
+            <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 space-y-1">
+                <strong class="font-bold flex items-center"><i class="fa-solid fa-circle-exclamation mr-1.5"></i> Purge operation rejected:</strong>
+                <ul class="list-disc list-inside space-y-0.5 text-[11px] pt-1">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+
+                <!-- Purge Scope Radio Selection -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                        1. Select Purge Scope *
+                    </label>
+                    <div class="space-y-3">
+                        <label class="flex items-start space-x-3 p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl cursor-pointer hover:border-indigo-400 transition has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50/30">
+                            <input type="radio" name="purge_scope" value="INVENTORY_ONLY" checked class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+                            <div class="text-xs">
+                                <span class="font-bold text-slate-900 block">Operational Purge (Recommended)</span>
+                                <span class="text-slate-500 text-[11px] mt-0.5 block leading-normal">
+                                    Erases all Devices, Intake Batches, Custody Movements, Assignments, Transfers, Returns, Incidents, Tasks, and Activity Logs. 
+                                    <strong>Preserves:</strong> Client Companies, POCs, Employers, Workers, and Staff user accounts.
+                                </span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-start space-x-3 p-4 bg-rose-50/50 border-2 border-rose-200 rounded-2xl cursor-pointer hover:border-rose-400 transition has-[:checked]:border-rose-600 has-[:checked]:bg-rose-50">
+                            <input type="radio" name="purge_scope" value="COMPLETE_FACTORY_RESET" class="mt-0.5 text-rose-600 focus:ring-rose-500">
+                            <div class="text-xs">
+                                <span class="font-bold text-rose-900 block">Complete Factory Reset (Destructive)</span>
+                                <span class="text-rose-700 text-[11px] mt-0.5 block leading-normal">
+                                    Completely resets the database to factory fresh state. Erases all inventory, transactions, clients, workers, and non-admin staff accounts. 
+                                    <strong>Only your current administrator account will be retained.</strong>
+                                </span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Confirmation Phrase -->
+                <div class="border-t border-slate-100 pt-5">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        2. Confirmation Phrase *
+                    </label>
+                    <p class="text-[11px] text-slate-500 mb-2">
+                        To prevent accidental clicks, please type <code class="px-2 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono font-bold text-rose-600 select-all">CONFIRM-ERASE-ALL-DATA</code> exactly as shown below:
+                    </p>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                            <i class="fa-solid fa-keyboard text-xs"></i>
+                        </span>
+                        {{ form.confirm_phrase }}
+                    </div>
+                </div>
+
+                <!-- Admin Password Confirmation -->
+                <div class="border-t border-slate-100 pt-5">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        3. Re-enter Administrator Password *
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                            <i class="fa-solid fa-lock text-xs"></i>
+                        </span>
+                        {{ form.admin_password }}
+                    </div>
+                    <span class="text-[11px] text-slate-400 mt-1 block">Your administrator account password must be re-entered to authorize this operation.</span>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
+                    <a href="{% url 'dashboard' %}" class="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+                        Cancel & Return Safe
+                    </a>
+                    <button type="submit" onclick="return confirm('CRITICAL WARNING: Are you sure you want to permanently erase all selected data? This action CANNOT be reversed!')" class="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-rose-200 flex items-center space-x-2">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>Authorize & Erase Selected Data</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

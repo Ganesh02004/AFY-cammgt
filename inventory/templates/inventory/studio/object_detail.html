@@ -1,0 +1,597 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}{{ object.name }} — Object & Field Builder | {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Breadcrumb & Back -->
+    <div class="flex items-center justify-between text-xs text-slate-500">
+        <a href="{% url 'builder_studio' %}" class="inline-flex items-center space-x-1 hover:text-indigo-600 font-semibold transition">
+            <i class="fa-solid fa-arrow-left mr-1"></i>
+            <span>Back to Setup Studio</span>
+        </a>
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'dynamic_record_list' api_name=object.api_name %}" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold flex items-center space-x-1.5 transition">
+                <i class="fa-solid fa-table-list text-slate-500"></i>
+                <span>Open Record List</span>
+            </a>
+            <a href="{% url 'dynamic_record_create' api_name=object.api_name %}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold flex items-center space-x-1.5 transition shadow-xs">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>New {{ object.name }}</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Object Header Card -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-start space-x-4">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl shadow-inner shrink-0">
+                <i class="fa-solid {{ object.icon }}"></i>
+            </div>
+            <div>
+                <div class="flex items-center space-x-2.5">
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900">{{ object.name }}</h1>
+                    <code class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono text-xs border border-slate-200">{{ object.api_name }}</code>
+                    {% if object.is_system %}
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                        Core System Entity
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-slate-500 mt-1 max-w-2xl">
+                    {{ object.description|default:"Configure fields, layouts, and validation rules for this object." }}
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2.5 self-start md:self-auto">
+            <button type="button" onclick="openNewFieldModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-100 flex items-center space-x-2 cursor-pointer">
+                <i class="fa-solid fa-plus"></i>
+                <span>Add Custom Field</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="border-b border-slate-200 flex space-x-6 text-xs font-bold">
+        <button type="button" onclick="switchTab('fields-tab', this)" class="studio-tab-btn pb-3 border-b-2 border-indigo-600 text-indigo-600 flex items-center space-x-1.5 cursor-pointer">
+            <i class="fa-solid fa-list-check"></i>
+            <span>Fields & Layout ({{ fields.count }})</span>
+        </button>
+        <button type="button" onclick="switchTab('preview-tab', this)" class="studio-tab-btn pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 cursor-pointer">
+            <i class="fa-solid fa-eye text-emerald-500"></i>
+            <span>Live Form Preview</span>
+        </button>
+        <button type="button" onclick="switchTab('settings-tab', this)" class="studio-tab-btn pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 cursor-pointer">
+            <i class="fa-solid fa-gear text-slate-400"></i>
+            <span>Object Settings</span>
+        </button>
+    </div>
+
+    <!-- TAB 1: Fields & Form Layout Table -->
+    <div id="fields-tab" class="studio-tab-content space-y-4">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <h2 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Configured Fields</h2>
+                    <p class="text-[11px] text-slate-500">Admins can toggle mandatory rules, reorder display sequence, or configure dropdown options.</p>
+                </div>
+                <span class="text-[11px] text-slate-500 font-medium">Changes take effect immediately without database migrations</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200">
+                        <tr>
+                            <th class="py-3 px-4">Order</th>
+                            <th class="py-3 px-4">Field Label</th>
+                            <th class="py-3 px-4">API Name (Internal Key)</th>
+                            <th class="py-3 px-4">Type</th>
+                            <th class="py-3 px-4">Requirement</th>
+                            <th class="py-3 px-4 text-center">List View</th>
+                            <th class="py-3 px-4 text-center">Status</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for f in fields %}
+                        <tr class="hover:bg-slate-50/70 transition {% if not f.is_active %}opacity-50 bg-slate-50/40{% endif %}">
+                            <td class="py-3 px-4 font-mono text-slate-400 font-semibold text-[11px]">
+                                #{{ f.display_order }}
+                            </td>
+                            <td class="py-3 px-4">
+                                <strong class="text-slate-800 font-bold block">{{ f.label }}</strong>
+                                {% if f.help_text %}
+                                <span class="text-[10px] text-slate-400 block truncate max-w-xs">{{ f.help_text }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 font-mono text-[11px] text-indigo-600">
+                                {{ f.api_name }}
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                    {{ f.get_field_type_display }}
+                                </span>
+                                {% if f.choices.exists %}
+                                <span class="text-[10px] text-slate-400 ml-1">({{ f.active_choices.count }} choices)</span>
+                                {% endif %}
+                                {% if f.lookup_object %}
+                                <span class="text-[10px] text-indigo-500 ml-1">➔ {{ f.lookup_object.name }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4">
+                                {% if f.is_required %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                    <i class="fa-solid fa-asterisk text-[8px] mr-1"></i> Mandatory
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500">
+                                    Optional
+                                </span>
+                                {% endif %}
+                                {% if f.is_sensitive %}
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200 ml-1" title="Masked for non-admins">
+                                    <i class="fa-solid fa-lock text-[8px] mr-0.5"></i> Masked
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                {% if f.show_in_list %}
+                                <i class="fa-solid fa-check text-emerald-600 text-xs"></i>
+                                {% else %}
+                                <span class="text-slate-300">&mdash;</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                {% if f.is_active %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    Active
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-400">
+                                    Deactivated
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-right space-x-1">
+                                <button type="button" onclick="openEditFieldModal('{{ f.id }}', '{{ f.label|escapejs }}', '{{ f.api_name|escapejs }}', '{{ f.field_type }}', {{ f.is_required|yesno:'true,false' }}, '{{ f.help_text|escapejs }}', '{{ f.placeholder|escapejs }}', '{{ f.default_value|escapejs }}', '{{ f.display_order }}', {{ f.show_in_list|yesno:'true,false' }}, {{ f.is_sensitive|yesno:'true,false' }}, '{{ f.min_value|default:'' }}', '{{ f.max_value|default:'' }}', '{{ f.validation_regex|escapejs }}', '{{ f.lookup_object.id|default:'' }}', [{% for c in f.choices.all %}{'val': '{{ c.value|escapejs }}', 'lbl': '{{ c.label|escapejs }}'}{% if not forloop.last %},{% endif %}{% endfor %}])" class="p-1.5 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition" title="Edit Field Config">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <a href="{% url 'builder_field_toggle_active' field_id=f.id %}" onclick="return confirm('{% if f.is_active %}Deactivate field \'{{ f.label|escapejs }}\'? Existing records will preserve their historical values, but the field will be hidden on new forms.{% else %}Reactivate this field?{% endif %}')" class="p-1.5 {% if f.is_active %}text-amber-500 hover:text-amber-700{% else %}text-emerald-500 hover:text-emerald-700{% endif %} rounded-lg hover:bg-slate-100 transition" title="{% if f.is_active %}Deactivate Field{% else %}Reactivate Field{% endif %}">
+                                    <i class="fa-solid {% if f.is_active %}fa-eye-slash{% else %}fa-eye{% endif %}"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-8 text-xs text-slate-400">
+                                No fields configured yet. Click "Add Custom Field" to start building.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: Live Form Preview -->
+    <div id="preview-tab" class="studio-tab-content hidden space-y-4">
+        <div class="max-w-2xl mx-auto bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl space-y-5">
+            <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        Interactive Live Preview
+                    </span>
+                    <h3 class="text-lg font-black text-slate-900 mt-1">New {{ object.name }} Form</h3>
+                    <p class="text-[11px] text-slate-500">This is exactly how users will see this form in the application.</p>
+                </div>
+                <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid {{ object.icon }}"></i>
+                </div>
+            </div>
+
+            <!-- Preview Form -->
+            <form id="live-preview-form" onsubmit="event.preventDefault(); validateLivePreview();" class="space-y-4 text-xs">
+                {% for item in preview_fields_data %}
+                {% with f=item.field choices=item.choices %}
+                <div class="space-y-1">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase">
+                        {{ f.label }}
+                        {% if f.is_required %}<span class="text-rose-500 font-extrabold">*</span>{% endif %}
+                    </label>
+
+                    {% if f.field_type == 'textarea' %}
+                        <textarea name="{{ f.api_name }}" placeholder="{{ f.placeholder }}" {% if f.is_required %}required{% endif %} rows="3" class="form-textarea text-xs">{{ f.default_value }}</textarea>
+
+                    {% elif f.field_type in 'select' %}
+                        <select name="{{ f.api_name }}" {% if f.is_required %}required{% endif %} class="form-select text-xs">
+                            <option value="">-- Select {{ f.label }} --</option>
+                            {% for c in choices %}
+                            <option value="{{ c.value }}">{{ c.label }}</option>
+                            {% endfor %}
+                        </select>
+
+                    {% elif f.field_type == 'radio' %}
+                        <div class="space-y-1 pt-1">
+                            {% for c in choices %}
+                            <label class="inline-flex items-center space-x-2 mr-4 cursor-pointer">
+                                <input type="radio" name="{{ f.api_name }}" value="{{ c.value }}" {% if f.is_required and forloop.first %}required{% endif %} class="text-indigo-600">
+                                <span class="text-xs text-slate-700">{{ c.label }}</span>
+                            </label>
+                            {% empty %}
+                            <span class="text-[11px] text-slate-400">No active radio choices configured yet.</span>
+                            {% endfor %}
+                        </div>
+
+                    {% elif f.field_type == 'boolean' %}
+                        <label class="inline-flex items-center space-x-2 cursor-pointer pt-1">
+                            <input type="checkbox" name="{{ f.api_name }}" value="true" class="rounded text-indigo-600">
+                            <span class="text-xs text-slate-700">{{ f.help_text|default:f.label }}</span>
+                        </label>
+
+                    {% elif f.field_type == 'lookup' %}
+                        <select name="{{ f.api_name }}" {% if f.is_required %}required{% endif %} class="form-select text-xs">
+                            <option value="">-- Choose Related {{ f.lookup_object.name|default:'Record' }} --</option>
+                            {% for c_id, c_label in choices %}
+                            <option value="{{ c_id }}">{{ c_label }}</option>
+                            {% empty %}
+                            <option value="" disabled>No existing {{ f.lookup_object.name }} records found</option>
+                            {% endfor %}
+                        </select>
+
+                    {% elif f.field_type == 'date' %}
+                        <input type="date" name="{{ f.api_name }}" {% if f.is_required %}required{% endif %} value="{{ f.default_value }}" class="form-input text-xs">
+
+                    {% elif f.field_type == 'datetime' %}
+                        <input type="datetime-local" name="{{ f.api_name }}" {% if f.is_required %}required{% endif %} class="form-input text-xs">
+
+                    {% elif f.field_type == 'number' %}
+                        <input type="number" name="{{ f.api_name }}" placeholder="{{ f.placeholder }}" {% if f.is_required %}required{% endif %} {% if f.min_value %}min="{{ f.min_value }}"{% endif %} {% if f.max_value %}max="{{ f.max_value }}"{% endif %} value="{{ f.default_value }}" class="form-input text-xs">
+
+                    {% elif f.field_type == 'phone' %}
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">+91</span>
+                            <input type="tel" name="{{ f.api_name }}" pattern="[6-9][0-9]{9}" maxlength="10" placeholder="e.g. 9876543210" {% if f.is_required %}required{% endif %} value="{{ f.default_value }}" class="form-input pl-11 text-xs font-mono">
+                        </div>
+
+                    {% elif f.field_type == 'readonly' %}
+                        <input type="text" readonly value="[Auto-Generated System Value]" class="form-input bg-slate-50 text-slate-500 text-xs">
+
+                    {% else %}
+                        <input type="{{ f.field_type|default:'text' }}" name="{{ f.api_name }}" placeholder="{{ f.placeholder }}" {% if f.is_required %}required{% endif %} value="{{ f.default_value }}" class="form-input text-xs">
+                    {% endif %}
+
+                    {% if f.help_text and f.field_type != 'boolean' %}
+                    <span class="text-[10px] text-slate-400 block">{{ f.help_text }}</span>
+                    {% endif %}
+                </div>
+                {% endwith %}
+                {% endfor %}
+
+                <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-[11px] text-slate-400 font-semibold"><span class="text-rose-500">*</span> Required fields</span>
+                    <button type="submit" class="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-sm">
+                        <i class="fa-solid fa-check mr-1.5"></i> Test Client-Side Form Validation
+                    </button>
+                </div>
+            </form>
+
+            <div id="preview-validation-result" class="hidden p-3 rounded-xl text-xs font-bold"></div>
+        </div>
+    </div>
+
+    <!-- TAB 3: Object Settings -->
+    <div id="settings-tab" class="studio-tab-content hidden space-y-4">
+        <div class="max-w-xl bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4 text-xs">
+            <h2 class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">Object General Configuration</h2>
+            <form method="post" action="{% url 'builder_object_edit' api_name=object.api_name %}" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Display Name</label>
+                    <input type="text" name="name" value="{{ object.name }}" required class="form-input text-xs">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">API Identifier</label>
+                    <input type="text" disabled value="{{ object.api_name }}" class="form-input bg-slate-100 font-mono text-slate-500 text-xs">
+                    <span class="text-[10px] text-slate-400 mt-0.5 block">API identifier is immutable to preserve historical records.</span>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">FontAwesome Icon Class</label>
+                    <input type="text" name="icon" value="{{ object.icon }}" class="form-input text-xs">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Description</label>
+                    <textarea name="description" rows="3" class="form-textarea text-xs">{{ object.description }}</textarea>
+                </div>
+                <div>
+                    <label class="inline-flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" name="is_active" value="true" {% if object.is_active %}checked{% endif %} class="rounded text-indigo-600">
+                        <span class="text-xs font-bold text-slate-700">Active / Published</span>
+                    </label>
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition">
+                        Save Object Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal: Add Custom Field -->
+<div id="new-field-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 space-y-4 text-xs animate-scale-short max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-bold">
+                    <i class="fa-solid fa-plus"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-slate-900">Add Custom Field to {{ object.name }}</h3>
+                    <p class="text-[11px] text-slate-500">Configure label, validation, choices, and requirements</p>
+                </div>
+            </div>
+            <button onclick="closeNewFieldModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form method="post" action="{% url 'builder_field_create' api_name=object.api_name %}" class="space-y-4">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Field Label *</label>
+                    <input type="text" name="label" required placeholder="e.g. Department, Blood Group" class="form-input text-xs" oninput="autoGenerateFieldApiName(this.value)">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Internal Key / API Name *</label>
+                    <input type="text" name="api_name" id="new-field-api-name" required placeholder="e.g. department" class="form-input text-xs font-mono">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Field Type *</label>
+                    <select name="field_type" id="new-field-type" onchange="toggleFieldTypeOptions(this.value)" required class="form-select text-xs">
+                        {% for ft_val, ft_lbl in field_types %}
+                        <option value="{{ ft_val }}">{{ ft_lbl }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Display Order</label>
+                    <input type="number" name="display_order" value="10" class="form-input text-xs">
+                </div>
+            </div>
+
+            <!-- Choices Box (for picklists and radios) -->
+            <div id="choices-config-box" class="hidden p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-1.5">
+                <label class="block text-[11px] font-bold text-slate-700 uppercase">Dropdown / Radio Choices (One per line)</label>
+                <textarea name="choices" rows="3" placeholder="key:Display Label&#10;e.g.&#10;sales:Sales Team&#10;operations:Operations&#10;security:Security Marshals" class="form-textarea text-xs font-mono"></textarea>
+                <span class="text-[10px] text-slate-400 block">Format: <code>stable_value:Display Label</code> or simply <code>Choice Label</code></span>
+            </div>
+
+            <!-- Lookup Object Target (for lookup relationships) -->
+            <div id="lookup-config-box" class="hidden p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-1.5">
+                <label class="block text-[11px] font-bold text-slate-700 uppercase">Target Lookup Object *</label>
+                <select name="lookup_object" class="form-select text-xs">
+                    <option value="">-- Select Target Object --</option>
+                    {% for lo in available_lookup_targets %}
+                    <option value="{{ lo.id }}">{{ lo.name }} ({{ lo.api_name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Placeholder Text</label>
+                    <input type="text" name="placeholder" placeholder="e.g. Enter contact number..." class="form-input text-xs">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Default Value</label>
+                    <input type="text" name="default_value" placeholder="Optional initial value" class="form-input text-xs">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Contextual Help Text</label>
+                <input type="text" name="help_text" placeholder="Guidance displayed below input" class="form-input text-xs">
+            </div>
+
+            <!-- Flags -->
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <label class="inline-flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" name="is_required" value="true" class="rounded text-indigo-600">
+                    <span class="text-xs font-bold text-slate-700"><span class="text-rose-500 font-extrabold">*</span> Mandatory</span>
+                </label>
+                <label class="inline-flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" name="show_in_list" value="true" class="rounded text-indigo-600">
+                    <span class="text-xs font-semibold text-slate-700">Show in Table</span>
+                </label>
+                <label class="inline-flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" name="is_searchable" value="true" class="rounded text-indigo-600">
+                    <span class="text-xs font-semibold text-slate-700">Searchable</span>
+                </label>
+                <label class="inline-flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" name="is_sensitive" value="true" class="rounded text-amber-600">
+                    <span class="text-xs font-semibold text-amber-900">Mask Sensitive</span>
+                </label>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button type="button" onclick="closeNewFieldModal()" class="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">
+                    Cancel
+                </button>
+                <button type="submit" class="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-100">
+                    Publish Field
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Edit Field -->
+<div id="edit-field-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 space-y-4 text-xs animate-scale-short max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="text-base font-bold text-slate-900">Edit Field Configuration</h3>
+            <button onclick="closeEditFieldModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form id="edit-field-form" method="post" action="" class="space-y-4">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Field Label *</label>
+                    <input type="text" name="label" id="edit-field-label" required class="form-input text-xs">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Internal Key</label>
+                    <input type="text" name="api_name" id="edit-field-api-name" class="form-input text-xs font-mono">
+                    <span class="text-[10px] text-slate-400 mt-0.5 block">Protected if stored data exists.</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Display Order</label>
+                    <input type="number" name="display_order" id="edit-field-order" class="form-input text-xs">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Placeholder Text</label>
+                    <input type="text" name="placeholder" id="edit-field-placeholder" class="form-input text-xs">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Help Text</label>
+                <input type="text" name="help_text" id="edit-field-help" class="form-input text-xs">
+            </div>
+
+            <!-- Choices Box for Edit -->
+            <div id="edit-choices-box" class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-1.5 hidden">
+                <label class="block text-[11px] font-bold text-slate-700 uppercase">Dropdown / Radio Choices (One per line)</label>
+                <textarea name="choices" id="edit-field-choices" rows="3" class="form-textarea text-xs font-mono"></textarea>
+            </div>
+
+            <!-- Flags -->
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <label class="inline-flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" name="is_required" id="edit-field-required" value="true" class="rounded text-indigo-600">
+                    <span class="text-xs font-bold text-slate-700"><span class="text-rose-500 font-extrabold">*</span> Mandatory</span>
+                </label>
+                <label class="inline-flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" name="show_in_list" id="edit-field-show-list" value="true" class="rounded text-indigo-600">
+                    <span class="text-xs font-semibold text-slate-700">Show in Table</span>
+                </label>
+                <label class="inline-flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" name="is_sensitive" id="edit-field-sensitive" value="true" class="rounded text-amber-600">
+                    <span class="text-xs font-semibold text-amber-900">Mask Sensitive</span>
+                </label>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button type="button" onclick="closeEditFieldModal()" class="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">
+                    Cancel
+                </button>
+                <button type="submit" class="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-100">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function switchTab(tabId, btn) {
+    document.querySelectorAll('.studio-tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.studio-tab-btn').forEach(b => {
+        b.classList.remove('border-indigo-600', 'text-indigo-600');
+        b.classList.add('border-transparent', 'text-slate-500');
+    });
+    document.getElementById(tabId).classList.remove('hidden');
+    btn.classList.add('border-indigo-600', 'text-indigo-600');
+    btn.classList.remove('border-transparent', 'text-slate-500');
+}
+
+function openNewFieldModal() {
+    const modal = document.getElementById('new-field-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+function closeNewFieldModal() {
+    const modal = document.getElementById('new-field-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+function autoGenerateFieldApiName(val) {
+    const el = document.getElementById('new-field-api-name');
+    if (el) el.value = val.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+}
+function toggleFieldTypeOptions(type) {
+    const choicesBox = document.getElementById('choices-config-box');
+    const lookupBox = document.getElementById('lookup-config-box');
+    if (['select', 'radio', 'multiselect'].includes(type)) {
+        choicesBox.classList.remove('hidden');
+    } else {
+        choicesBox.classList.add('hidden');
+    }
+    if (type === 'lookup') {
+        lookupBox.classList.remove('hidden');
+    } else {
+        lookupBox.classList.add('hidden');
+    }
+}
+
+function openEditFieldModal(id, label, apiName, type, isRequired, help, placeholder, defaultVal, order, showList, isSensitive, minVal, maxVal, regex, lookupId, choices) {
+    const form = document.getElementById('edit-field-form');
+    form.action = `/studio/fields/${id}/edit/`;
+    document.getElementById('edit-field-label').value = label;
+    document.getElementById('edit-field-api-name').value = apiName;
+    document.getElementById('edit-field-order').value = order;
+    document.getElementById('edit-field-placeholder').value = placeholder;
+    document.getElementById('edit-field-help').value = help;
+    document.getElementById('edit-field-required').checked = isRequired;
+    document.getElementById('edit-field-show-list').checked = showList;
+    document.getElementById('edit-field-sensitive').checked = isSensitive;
+
+    const choicesBox = document.getElementById('edit-choices-box');
+    if (['select', 'radio', 'multiselect'].includes(type)) {
+        choicesBox.classList.remove('hidden');
+        const lines = choices.map(c => `${c.val}:${c.lbl}`).join('\n');
+        document.getElementById('edit-field-choices').value = lines;
+    } else {
+        choicesBox.classList.add('hidden');
+    }
+
+    const modal = document.getElementById('edit-field-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeEditFieldModal() {
+    const modal = document.getElementById('edit-field-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function validateLivePreview() {
+    const form = document.getElementById('live-preview-form');
+    const resultBox = document.getElementById('preview-validation-result');
+    if (form.checkValidity()) {
+        resultBox.className = 'p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold block';
+        resultBox.innerHTML = '<i class="fa-solid fa-circle-check mr-1.5 text-emerald-600"></i> Form validation passed! All mandatory fields and formats are valid.';
+    } else {
+        form.reportValidity();
+        resultBox.className = 'p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold block';
+        resultBox.innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1.5 text-rose-600"></i> Mandatory fields or format validation rules blocked submission.';
+    }
+}
+</script>
+{% endblock %}

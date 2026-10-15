@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invalid Pairing Session — AFY Remote Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-6 font-sans">
+    <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-5 shadow-2xl">
+        <div class="w-16 h-16 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center text-2xl mx-auto border border-rose-500/20">
+            <i class="fa-solid fa-link-slash"></i>
+        </div>
+
+        <div class="space-y-1">
+            <h1 class="text-xl font-black text-white">Scanner Session Expired</h1>
+            <p class="text-xs text-slate-400">
+                {{ error_message|default:"This mobile scanner pairing QR code has expired or has already been closed on the desktop." }}
+            </p>
+        </div>
+
+        <div class="p-4 bg-slate-950/80 rounded-2xl border border-slate-800/80 text-left text-xs text-slate-400 space-y-2">
+            <div class="flex items-center space-x-2 text-indigo-400 font-bold">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>How to Reconnect:</span>
+            </div>
+            <p class="text-[11px]">
+                1. Refresh the scanning page on your desktop computer.<br>
+                2. Scan the newly generated pairing QR code with your mobile camera.
+            </p>
+        </div>
+
+        <div class="pt-2">
+            <a href="/" class="inline-block px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition">
+                Return to Portal
+            </a>
+        </div>
+    </div>
+</body>
+</html>

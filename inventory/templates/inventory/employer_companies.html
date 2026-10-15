@@ -1,0 +1,89 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Employer Companies — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Staffing Agencies & Partners</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Employer Companies</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Companies employing field workers who receive cameras and tracking gear.</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Employer List -->
+        <div class="lg:col-span-2 space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {% for emp in employers %}
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                            {{ emp.code }}
+                        </span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {% if emp.status == 'ACTIVE' %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-600{% endif %}">
+                            {{ emp.status }}
+                        </span>
+                    </div>
+
+                    <h3 class="text-base font-bold text-slate-900">{{ emp.name }}</h3>
+                    <p class="text-xs text-slate-500">{{ emp.address }}</p>
+                    <p class="text-[11px] text-slate-400 font-mono">{{ emp.contact_details }}</p>
+
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                        <span>Associated Workers:</span>
+                        <strong class="text-slate-800 text-sm font-bold">{{ emp.workers_count }}</strong>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-2 p-8 text-center text-slate-400">No employer companies registered.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Add Employer Form -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                <i class="fa-solid fa-plus text-indigo-600"></i>
+                <span>Register Employer Company</span>
+            </h2>
+
+            <form method="post" class="space-y-3 text-xs">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Company Name *</label>
+                    {{ form.name }}
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Company Code *</label>
+                    {{ form.code }}
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Address *</label>
+                    {{ form.address }}
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Contact Details</label>
+                    {{ form.contact_details }}
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Status</label>
+                    {{ form.status }}
+                </div>
+
+                <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition shadow-sm">
+                    Save Employer Company
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

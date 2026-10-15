@@ -1,0 +1,217 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}User & Role Management — AFY Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Page Header -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
+                    <i class="fa-solid fa-user-shield mr-1"></i> Admin Security Control
+                </span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">User & Role Management</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Control staff login authorization, review profile photographs, approve roles (Admin, Management, Postman), and manage account status.</p>
+        </div>
+
+        <a href="{% url 'user_create' %}" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-md shadow-indigo-100 shrink-0">
+            <i class="fa-solid fa-user-plus text-xs"></i>
+            <span>Create User Manually</span>
+        </a>
+    </div>
+
+    <!-- Pending User Registrations Approval Queue -->
+    {% if pending_users %}
+    <div class="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-2 border-amber-400 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/80 pb-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-lg font-bold shadow-xs">
+                    <i class="fa-solid fa-user-clock animate-pulse"></i>
+                </div>
+                <div>
+                    <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">
+                        Pending User Registrations Awaiting Admin Approval ({{ pending_users.count }})
+                    </h2>
+                    <p class="text-[11px] text-slate-600">Review candidate photographs, verified phone numbers, and requested roles before activating operational privileges.</p>
+                </div>
+            </div>
+            <span class="badge badge-amber text-xs font-bold">{{ pending_users.count }} Action Required</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            {% for pu in pending_users %}
+            <div class="bg-white p-5 rounded-2xl border border-amber-200 shadow-sm flex flex-col justify-between space-y-4">
+                
+                <div class="flex items-start space-x-3.5">
+                    <!-- Photo Thumbnail -->
+                    {% if pu.profile_photo %}
+                    <img src="{{ pu.profile_photo.url }}" alt="{{ pu.display_name }}" class="w-16 h-16 rounded-2xl object-cover border-2 border-amber-300 shadow-xs shrink-0">
+                    {% else %}
+                    <div class="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xl shrink-0 font-bold border border-indigo-200">
+                        {{ pu.first_name|slice:":1"|default:"U" }}
+                    </div>
+                    {% endif %}
+
+                    <div class="space-y-1 min-w-0 flex-1">
+                        <div class="flex items-center justify-between">
+                            <strong class="text-sm font-extrabold text-slate-900 truncate">{{ pu.display_name }}</strong>
+                            <span class="text-[10px] text-slate-400 font-mono">{{ pu.date_joined|date:"M d, H:i" }}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 truncate">@{{ pu.username }} &bull; {{ pu.email }}</p>
+                        
+                        <div class="pt-1 flex flex-wrap gap-1">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold
+                                {% if pu.requested_role == 'MANAGEMENT' %}bg-blue-100 text-blue-800 border border-blue-200
+                                {% else %}bg-emerald-100 text-emerald-800 border border-emerald-200{% endif %}">
+                                Requested: {{ pu.get_requested_role_display }}
+                            </span>
+                            {% if pu.phone %}
+                            <span class="badge badge-slate text-[10px] font-mono">
+                                <i class="fa-solid fa-phone mr-1"></i>{{ pu.phone }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if pu.work_location %}
+                <div class="text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-location-dot text-indigo-600 shrink-0"></i>
+                    <span class="truncate">Operating Area: <strong>{{ pu.work_location }}</strong></span>
+                </div>
+                {% endif %}
+
+                <!-- Approval Form with Role Assignment -->
+                <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                    <form method="post" action="{% url 'user_reject' pu.id %}" onsubmit="return confirm('Reject registration application for {{ pu.username }}?');">
+                        {% csrf_token %}
+                        <button type="submit" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-xl text-xs transition flex items-center space-x-1 cursor-pointer">
+                            <i class="fa-solid fa-xmark text-[11px]"></i>
+                            <span>Reject</span>
+                        </button>
+                    </form>
+
+                    <form method="post" action="{% url 'user_approve' pu.id %}" class="flex items-center space-x-1.5">
+                        {% csrf_token %}
+                        <select name="role" class="form-select py-1 px-2 text-[11px] font-bold rounded-xl border-slate-300">
+                            <option value="POSTMAN" {% if pu.requested_role == 'POSTMAN' %}selected{% endif %}>Approve as Postman</option>
+                            <option value="MANAGEMENT" {% if pu.requested_role == 'MANAGEMENT' %}selected{% endif %}>Approve as Management</option>
+                            <option value="ADMIN">Approve as Admin</option>
+                        </select>
+                        <button type="submit" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center space-x-1 shadow-sm cursor-pointer">
+                            <i class="fa-solid fa-check text-[11px]"></i>
+                            <span>Approve</span>
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- All Users Table -->
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between text-xs">
+            <div>
+                <h3 class="font-bold text-slate-900 text-sm">All Staff Accounts ({{ users.count }})</h3>
+                <p class="text-[11px] text-slate-500">Active and registered personnel across AFY Camera Inventory</p>
+            </div>
+            <span class="text-slate-400 font-mono text-[11px]">Source of Truth: Database</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold border-b border-slate-100">
+                    <tr>
+                        <th class="py-3 px-4">Staff Member</th>
+                        <th class="py-3 px-4">Username</th>
+                        <th class="py-3 px-4">Role</th>
+                        <th class="py-3 px-4">Contact Info</th>
+                        <th class="py-3 px-4">Approval Status</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for u in users %}
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3.5 px-4 font-semibold text-slate-800">
+                            <div class="flex items-center space-x-3">
+                                {% if u.profile_photo %}
+                                <img src="{{ u.profile_photo.url }}" alt="{{ u.display_name }}" class="w-9 h-9 rounded-xl object-cover border border-slate-200 shrink-0">
+                                {% else %}
+                                <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs shrink-0">
+                                    {{ u.first_name|slice:":1"|default:"U" }}
+                                </div>
+                                {% endif %}
+                                <div class="min-w-0">
+                                    <strong class="text-slate-900 block truncate">{{ u.display_name }}</strong>
+                                    {% if u.work_location %}<span class="text-[10px] text-slate-400 block truncate">{{ u.work_location }}</span>{% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 font-mono text-slate-600">@{{ u.username }}</td>
+                        <td class="py-3.5 px-4">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold
+                                {% if u.role == 'ADMIN' %}bg-purple-100 text-purple-800 border border-purple-200
+                                {% elif u.role == 'MANAGEMENT' %}bg-blue-100 text-blue-800 border border-blue-200
+                                {% else %}bg-emerald-100 text-emerald-800 border border-emerald-200{% endif %}">
+                                {{ u.get_role_display }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-600">
+                            <div>{{ u.email|default:'—' }}</div>
+                            {% if u.phone %}<div class="font-mono text-[10px] text-slate-400">+91 {{ u.phone }}</div>{% endif %}
+                        </td>
+                        <td class="py-3.5 px-4">
+                            {% if u.approval_status == 'APPROVED' %}
+                            <span class="badge badge-emerald text-[10px]">
+                                <i class="fa-solid fa-circle-check mr-1"></i>Approved & Active
+                            </span>
+                            {% elif u.approval_status == 'PENDING' %}
+                            <span class="badge badge-amber text-[10px]">
+                                <i class="fa-solid fa-clock mr-1"></i>Pending Approval
+                            </span>
+                            {% elif u.approval_status == 'DEACTIVATED' %}
+                            <span class="badge badge-rose text-[10px]">
+                                <i class="fa-solid fa-ban mr-1"></i>Deactivated
+                            </span>
+                            {% else %}
+                            <span class="badge badge-slate text-[10px]">
+                                {{ u.get_approval_status_display }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-right whitespace-nowrap space-x-1">
+                            {% if u.approval_status == 'PENDING' %}
+                            <form method="post" action="{% url 'user_approve' u.id %}" class="inline-block">
+                                {% csrf_token %}
+                                <button type="submit" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition">
+                                    Approve
+                                </button>
+                            </form>
+                            {% elif not u.is_admin and u.id != request.user.id %}
+                            <form method="post" action="{% url 'user_toggle_status' u.id %}" class="inline-block" onsubmit="return confirm('Change active status for {{ u.username }}?');">
+                                {% csrf_token %}
+                                <button type="submit" class="px-2.5 py-1 {% if u.is_active %}bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200{% else %}bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200{% endif %} font-bold rounded-lg text-xs transition">
+                                    {% if u.is_active %}Deactivate{% else %}Reactivate{% endif %}
+                                </button>
+                            </form>
+                            {% endif %}
+                            <a href="{% url 'user_edit' u.id %}" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition">
+                                Edit
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

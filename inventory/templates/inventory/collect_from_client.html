@@ -1,0 +1,410 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Collect from Client (Intake) — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Inbound Workflow</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Collect from Client (Intake)</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Record collection from client company and generate individual device records and QR codes atomically.</p>
+        </div>
+        <a href="{% url 'my_inventory' %}" class="text-xs font-semibold text-slate-500 hover:text-slate-800">Cancel</a>
+    </div>
+
+    <form method="post" id="intake-form" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Step 1: Pickup Header Details -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h2 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center space-x-2">
+                <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[11px] flex items-center justify-center">1</span>
+                <span>Client & Pickup Metadata</span>
+            </h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Source Client Company *</label>
+                    {{ header_form.client }}
+                    <span class="text-[10px] text-slate-400 mt-0.5 block">Select client to load their specific authorized POCs</span>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase">Actual Client POC / Contact</label>
+                        <button type="button" onclick="openQuickAddPocModal()" id="btn-quick-add-poc" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition hidden">
+                            <i class="fa-solid fa-plus-circle mr-0.5"></i> Add New POC
+                        </button>
+                    </div>
+                    {{ header_form.actual_poc }}
+                    <span id="poc-loading-status" class="text-[10px] text-indigo-600 font-medium mt-0.5 hidden"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Loading contacts...</span>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Collecting Staff Member *</label>
+                    {{ header_form.collecting_user }}
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Scheduled / Collection Time</label>
+                    {{ header_form.scheduled_time }}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Pickup Location / Office Address</label>
+                    {{ header_form.location_address }}
+                    {{ header_form.latitude }}
+                    {{ header_form.longitude }}
+                </div>
+
+                <!-- Dynamic Location Selection (Interactive Google Maps / Leaflet + GPS) -->
+                <div class="sm:col-span-3">
+                    {% include 'inventory/location_picker.html' %}
+                </div>
+
+                <div class="sm:col-span-3">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">General Batch Notes</label>
+                    {{ header_form.pickup_notes }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Physical Devices Received -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center space-x-2">
+                    <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[11px] flex items-center justify-center">2</span>
+                    <span>Physical Devices Collected</span>
+                </h2>
+                <button type="button" onclick="addDeviceRow()" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-lg transition flex items-center space-x-1">
+                    <i class="fa-solid fa-plus text-[10px]"></i>
+                    <span>+ Add Another Device</span>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-500">Each physical camera or phone will receive a unique internal Asset ID and QR code in the custody ledger.</p>
+
+            <!-- Container for Device Rows -->
+            <div id="device-rows-container" class="space-y-4">
+
+                <!-- Row 1 (Default) -->
+                <div class="device-card p-4 rounded-xl border border-slate-200 bg-slate-50/70 relative space-y-3">
+                    <div class="flex items-center justify-between border-b border-slate-200/60 pb-2">
+                        <span class="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+                            <i class="fa-solid fa-camera text-indigo-500"></i>
+                            <span class="device-index-label">Device #1</span>
+                        </span>
+                        <button type="button" onclick="removeDeviceRow(this)" class="text-slate-400 hover:text-rose-600 text-xs font-semibold p-1">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Device Type *</label>
+                            <select name="device_type[]" class="form-select">
+                                {% for code, label in device_type_choices %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Brand & Model *</label>
+                            <input type="text" name="brand_and_model[]" required placeholder="e.g. Sony Alpha 7 IV / Galaxy S22" class="form-input">
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Serial / IMEI Number</label>
+                            <input type="text" name="imei_or_serial[]" placeholder="SN / IMEI (leave blank if exempt)" class="form-input font-mono">
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Initial Condition</label>
+                            <select name="condition[]" class="form-select">
+                                {% for code, label in condition_choices %}
+                                <option value="{{ code }}" {% if code == 'GOOD' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Accessories Included</label>
+                            <input type="text" name="accessories[]" placeholder="e.g. Charger, USB Cable, Bag, 64GB SD" class="form-input">
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Device Condition Notes</label>
+                            <input type="text" name="notes[]" placeholder="Minor scratches, seal intact, etc." class="form-input">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex items-center justify-end space-x-3 pt-2">
+            <a href="{% url 'dashboard' %}" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition">
+                Cancel
+            </a>
+            <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-md shadow-indigo-100">
+                <i class="fa-solid fa-check"></i>
+                <span>Confirm Pickup & Generate QR Asset Codes</span>
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+    function updateRowIndices() {
+        const cards = document.querySelectorAll('.device-card');
+        cards.forEach((card, index) => {
+            const label = card.querySelector('.device-index-label');
+            if (label) {
+                label.textContent = `Device #${index + 1}`;
+            }
+        });
+    }
+
+    function addDeviceRow() {
+        const container = document.getElementById('device-rows-container');
+        const firstCard = container.querySelector('.device-card');
+        const newCard = firstCard.cloneNode(true);
+
+        // Clear values
+        newCard.querySelectorAll('input').forEach(input => input.value = '');
+        newCard.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+
+        container.appendChild(newCard);
+        updateRowIndices();
+    }
+
+    function removeDeviceRow(btn) {
+        const container = document.getElementById('device-rows-container');
+        const cards = container.querySelectorAll('.device-card');
+        if (cards.length > 1) {
+            btn.closest('.device-card').remove();
+            updateRowIndices();
+        } else {
+            alert("A pickup must contain at least one device.");
+        }
+    }
+
+    // Client-Specific Contact Person (POC) Dynamic Dropdown
+    const clientSelect = document.getElementById('client-select');
+    const pocSelect = document.getElementById('poc-select');
+    const pocLoadingStatus = document.getElementById('poc-loading-status');
+
+    function updateClientContacts(selectedPocId = null) {
+        if (!clientSelect || !pocSelect) return;
+        const clientId = clientSelect.value;
+
+        if (!clientId) {
+            pocSelect.innerHTML = '<option value="">-- First select a client company --</option>';
+            pocSelect.disabled = true;
+            return;
+        }
+
+        pocSelect.disabled = false;
+        if (pocLoadingStatus) pocLoadingStatus.classList.remove('hidden');
+
+        fetch(`/api/clients/${clientId}/contacts/`)
+            .then(res => res.json())
+            .then(data => {
+                if (pocLoadingStatus) pocLoadingStatus.classList.add('hidden');
+                pocSelect.innerHTML = '<option value="">-- Select Contact Person (POC) --</option>';
+
+                if (data.contacts && data.contacts.length > 0) {
+                    data.contacts.forEach(contact => {
+                        const opt = document.createElement('option');
+                        opt.value = contact.id;
+                        const role = contact.designation ? ` (${contact.designation})` : '';
+                        const phone = contact.phone ? ` - ${contact.phone}` : '';
+                        opt.textContent = `${contact.name}${role}${phone}`;
+                        if (selectedPocId && String(selectedPocId) === String(contact.id)) {
+                            opt.selected = true;
+                        }
+                        pocSelect.appendChild(opt);
+                    });
+                } else {
+                    const opt = document.createElement('option');
+                    opt.value = "";
+                    opt.textContent = "No POC contacts registered for this client";
+                    pocSelect.appendChild(opt);
+                }
+            })
+            .catch(err => {
+                if (pocLoadingStatus) pocLoadingStatus.classList.add('hidden');
+                console.error("Failed to load client contacts:", err);
+            });
+    }
+
+    const btnQuickAddPoc = document.getElementById('btn-quick-add-poc');
+
+    function checkPocButtonVisibility() {
+        if (!clientSelect || !btnQuickAddPoc) return;
+        if (clientSelect.value) {
+            btnQuickAddPoc.classList.remove('hidden');
+        } else {
+            btnQuickAddPoc.classList.add('hidden');
+        }
+    }
+
+    function openQuickAddPocModal() {
+        if (!clientSelect.value) {
+            alert("Please select a Client Company first.");
+            return;
+        }
+        const clientText = clientSelect.options[clientSelect.selectedIndex].text;
+        document.getElementById('poc-modal-client-name').textContent = clientText;
+        document.getElementById('poc-quick-error').classList.add('hidden');
+        document.getElementById('quick-poc-modal').classList.remove('hidden');
+    }
+
+    function closeQuickAddPocModal() {
+        document.getElementById('quick-poc-modal').classList.add('hidden');
+    }
+
+    function submitQuickAddPoc() {
+        const clientId = clientSelect.value;
+        const name = document.getElementById('quick-poc-name').value.trim();
+        const designation = document.getElementById('quick-poc-designation').value.trim();
+        const phone = document.getElementById('quick-poc-phone').value.trim();
+        const email = document.getElementById('quick-poc-email').value.trim();
+        const errEl = document.getElementById('poc-quick-error');
+
+        if (!name) {
+            errEl.textContent = "Please enter the contact person's full name.";
+            errEl.classList.remove('hidden');
+            return;
+        }
+        if (!phone || phone.length !== 10 || !/^[6-9]\d{9}$/.test(phone)) {
+            errEl.textContent = "Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.";
+            errEl.classList.remove('hidden');
+            return;
+        }
+
+        errEl.classList.add('hidden');
+        const submitBtn = document.getElementById('btn-save-quick-poc');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...`;
+
+        fetch(`/api/clients/${clientId}/contacts/create/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                name: name,
+                designation: designation,
+                phone: phone,
+                email: email
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `Save Contact Person`;
+            if (data.success) {
+                // Clear modal inputs
+                document.getElementById('quick-poc-name').value = '';
+                document.getElementById('quick-poc-designation').value = '';
+                document.getElementById('quick-poc-phone').value = '';
+                document.getElementById('quick-poc-email').value = '';
+                closeQuickAddPocModal();
+
+                // Refresh POC dropdown and select the newly created contact
+                updateClientContacts(data.contact.id);
+            } else {
+                errEl.textContent = data.error || "Failed to create contact.";
+                errEl.classList.remove('hidden');
+            }
+        })
+        .catch(err => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `Save Contact Person`;
+            errEl.textContent = "Network error: " + err.message;
+            errEl.classList.remove('hidden');
+        });
+    }
+
+    if (clientSelect) {
+        clientSelect.addEventListener('change', () => {
+            checkPocButtonVisibility();
+            updateClientContacts();
+        });
+        checkPocButtonVisibility();
+        // Initial run on page load if client is already selected
+        if (clientSelect.value) {
+            const initialPoc = pocSelect ? pocSelect.value : null;
+            updateClientContacts(initialPoc);
+        } else if (pocSelect) {
+            pocSelect.innerHTML = '<option value="">-- First select a client company --</option>';
+            pocSelect.disabled = true;
+        }
+    }
+</script>
+
+<!-- Quick Add POC Modal -->
+<div id="quick-poc-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-200 text-xs">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+                <h3 class="text-sm font-extrabold text-slate-900">Add New Contact Person</h3>
+                <p id="poc-modal-client-name" class="text-[11px] text-indigo-600 font-semibold"></p>
+            </div>
+            <button type="button" onclick="closeQuickAddPocModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+        </div>
+
+        <div id="poc-quick-error" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-[11px]"></div>
+
+        <div class="space-y-3">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Full Name *</label>
+                <input type="text" id="quick-poc-name" placeholder="e.g. Ramesh Kumar" class="form-input">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Designation / Role</label>
+                <input type="text" id="quick-poc-designation" placeholder="e.g. Store Manager / Shift Lead" class="form-input">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Mobile Phone (10-Digit Indian) *</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">+91</span>
+                    <input type="tel" id="quick-poc-phone" placeholder="9876543210" maxlength="10" pattern="[6-9][0-9]{9}" class="form-input pl-11 font-mono">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Email Address</label>
+                <input type="email" id="quick-poc-email" placeholder="contact@company.com" class="form-input">
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+            <button type="button" onclick="closeQuickAddPocModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition">
+                Cancel
+            </button>
+            <button type="button" onclick="submitQuickAddPoc()" id="btn-save-quick-poc" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-sm flex items-center space-x-1.5">
+                <i class="fa-solid fa-check text-xs"></i>
+                <span>Save Contact Person</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

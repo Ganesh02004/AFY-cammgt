@@ -1,0 +1,185 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}{{ worker.name }} ({{ worker.worker_id }}) — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <div class="flex items-center justify-between">
+        <a href="{% url 'workers_list' %}" class="inline-flex items-center space-x-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back to Workers</span>
+        </a>
+    </div>
+
+    <!-- Worker Profile Header -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div>
+                <span class="font-mono text-xs font-bold px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                    {{ worker.worker_id }}
+                </span>
+                <h1 class="text-2xl font-extrabold text-slate-900 mt-1">{{ worker.name }}</h1>
+                <p class="text-xs text-slate-500">Employed by: <strong class="text-slate-800">{{ worker.employer_company.name }}</strong></p>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 self-start sm:self-center">
+                {{ worker.role_or_status }}
+            </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div>
+                <span class="text-slate-400 block text-[10px] font-bold uppercase">Phone Number</span>
+                <span class="font-mono text-slate-800 font-semibold">{{ worker.phone }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 block text-[10px] font-bold uppercase">Email</span>
+                <span class="text-slate-800">{{ worker.email|default:'N/A' }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 block text-[10px] font-bold uppercase">Address</span>
+                <span class="text-slate-800">{{ worker.address|default:'Not provided' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sensitive Privacy & Financial Data Card (Strictly Guarded) -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-user-shield text-indigo-600"></i>
+                <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Restricted Financial & Identity Records</h2>
+            </div>
+            {% if user.is_admin %}
+                {% if show_sensitive %}
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 animate-pulse">
+                    <i class="fa-solid fa-eye mr-1"></i> Access Logged & Audited
+                </span>
+                {% else %}
+                <a href="?reveal=1" class="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition flex items-center space-x-1.5 border border-indigo-200">
+                    <i class="fa-solid fa-lock-open text-[11px]"></i>
+                    <span>Reveal Details (Admin Audited)</span>
+                </a>
+                {% endif %}
+            {% else %}
+                <span class="text-[11px] text-slate-400 font-medium">Masked for privacy compliance</span>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs pt-2">
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span class="text-slate-400 block text-[10px] font-bold uppercase">Aadhaar Number</span>
+                <span class="font-mono text-slate-800 font-bold text-sm">
+                    {% if show_sensitive and worker.aadhaar_number %}
+                        {{ worker.aadhaar_number }}
+                    {% else %}
+                        {{ worker.masked_aadhaar }}
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span class="text-slate-400 block text-[10px] font-bold uppercase">Bank Account Number</span>
+                <span class="font-mono text-slate-800 font-bold text-sm">
+                    {% if show_sensitive and worker.bank_account_number %}
+                        {{ worker.bank_account_number }}
+                    {% else %}
+                        {{ worker.masked_bank }}
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span class="text-slate-400 block text-[10px] font-bold uppercase">IFSC / UPI</span>
+                <span class="font-mono text-slate-800 font-bold text-sm">
+                    {% if show_sensitive %}
+                        {{ worker.bank_ifsc|default:'—' }} {% if worker.upi_id %}({{ worker.upi_id }}){% endif %}
+                    {% else %}
+                        XXXX000****
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Equipment In Hand -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                <i class="fa-solid fa-camera text-indigo-600"></i>
+                <span>Currently Assigned Equipment ({{ active_assignments.count }})</span>
+            </h2>
+        </div>
+
+        {% if active_assignments %}
+        <div class="divide-y divide-slate-100 text-xs">
+            {% for a in active_assignments %}
+            <div class="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-slate-50 transition">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <a href="{% url 'device_detail' a.device.id %}" class="font-mono font-bold text-indigo-600 hover:underline text-sm">
+                            {{ a.device.asset_id }}
+                        </a>
+                        <span class="font-semibold text-slate-800">{{ a.device.brand_and_model }}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
+                            Active in Field
+                        </span>
+                    </div>
+                    <p class="text-slate-500 mt-0.5">
+                        Assigned on: {{ a.assignment_time|date:"M d, Y" }} by {{ a.delivering_user.display_name }}
+                        {% if a.expected_return_date %} &bull; Return Due: <strong class="text-slate-700">{{ a.expected_return_date|date:"M d, Y" }}</strong>{% endif %}
+                    </p>
+                </div>
+
+                <a href="{% url 'return_device_process' a.device.id %}" class="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-xl border border-blue-200 transition text-xs flex items-center space-x-1">
+                    <i class="fa-solid fa-rotate-left text-xs"></i>
+                    <span>Receive Return</span>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-8 text-center text-slate-400 text-xs">This worker currently has no devices assigned.</div>
+        {% endif %}
+    </div>
+
+    <!-- Assignment History -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100">
+            <h2 class="text-sm font-bold text-slate-900">Historical Equipment Assignments</h2>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold border-b border-slate-100">
+                    <tr>
+                        <th class="py-2.5 px-4">Date</th>
+                        <th class="py-2.5 px-4">Device</th>
+                        <th class="py-2.5 px-4">Model</th>
+                        <th class="py-2.5 px-4">Status</th>
+                        <th class="py-2.5 px-4">Delivered By</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for h in assignment_history %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-2.5 px-4 text-slate-500">{{ h.assignment_time|date:"M d, Y" }}</td>
+                        <td class="py-2.5 px-4 font-mono font-bold">{{ h.device.asset_id }}</td>
+                        <td class="py-2.5 px-4">{{ h.device.brand_and_model }}</td>
+                        <td class="py-2.5 px-4">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
+                                {{ h.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-4 text-slate-600">{{ h.delivering_user.display_name }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="p-4 text-center text-slate-400">No past assignment history.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

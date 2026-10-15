@@ -1,0 +1,89 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Incidents & Damages — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Loss & Damage Management</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Incident Reports</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Track hardware damage, suspected thefts, missing devices, and inventory discrepancies.</p>
+        </div>
+
+        <a href="{% url 'incident_report' %}" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-sm">
+            <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+            <span>Report New Incident</span>
+        </a>
+    </div>
+
+    <!-- Incident List Cards -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-900">Reported Incidents ({{ incidents.count }})</h2>
+        </div>
+
+        <div class="divide-y divide-slate-100">
+            {% for inc in incidents %}
+            <div class="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-slate-50/60 transition">
+                <div class="space-y-1.5 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-slate-900 font-mono text-sm">Incident #{{ inc.id }}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
+                            {% if inc.incident_type == 'DAMAGE' %}bg-rose-100 text-rose-800
+                            {% elif inc.incident_type == 'LOSS' %}bg-red-100 text-red-800
+                            {% else %}bg-amber-100 text-amber-800{% endif %}">
+                            {{ inc.get_incident_type_display }}
+                        </span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold
+                            {% if inc.status == 'RESOLVED' %}bg-emerald-100 text-emerald-800
+                            {% else %}bg-amber-100 text-amber-800{% endif %}">
+                            {{ inc.get_status_display }}
+                        </span>
+                    </div>
+
+                    <p class="text-slate-700">
+                        Device: 
+                        <a href="{% url 'device_detail' inc.device.id %}" class="font-bold text-indigo-600 hover:underline">
+                            {{ inc.device.asset_id }} &mdash; {{ inc.device.brand_and_model }}
+                        </a>
+                    </p>
+
+                    <p class="text-slate-500">
+                        Reported by: <strong>{{ inc.reporter.display_name }}</strong> on {{ inc.timestamp|date:"M d, Y - H:i" }}
+                    </p>
+
+                    <p class="text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+                        "{{ inc.notes }}"
+                    </p>
+
+                    {% if inc.resolution_notes %}
+                    <p class="text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-200/60">
+                        <strong>Resolution:</strong> {{ inc.resolution_notes }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                {% if inc.status != 'RESOLVED' %}
+                <a href="{% url 'incident_resolve' inc.id %}" class="px-3.5 py-2 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 self-end sm:self-center">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Resolve / Investigate</span>
+                </a>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="p-12 text-center text-slate-400">
+                <i class="fa-solid fa-shield-check text-3xl text-emerald-400 mb-2"></i>
+                <h3 class="text-sm font-bold text-slate-700">No active incidents reported</h3>
+                <p class="text-xs text-slate-500 mt-1">All equipment is in operational order without damages or loss.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

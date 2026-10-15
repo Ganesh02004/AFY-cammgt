@@ -1,0 +1,65 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Create Operational Task — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto space-y-6">
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <h1 class="text-xl font-extrabold text-slate-900">Create Operational Task</h1>
+        <a href="{% url 'tasks_list' %}" class="text-xs font-semibold text-slate-500 hover:text-slate-800">Cancel</a>
+    </div>
+
+    <form method="post" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 text-xs">
+        {% csrf_token %}
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Task Title *</label>
+            {{ form.title }}
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Task Type *</label>
+                {{ form.task_type }}
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Priority *</label>
+                {{ form.priority }}
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Assigned Staff User *</label>
+                {{ form.assigned_user }}
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Scheduled Date & Time</label>
+                {{ form.scheduled_time }}
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Client (Optional)</label>
+                {{ form.client }}
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Worker (Optional)</label>
+                {{ form.worker }}
+            </div>
+            <div class="sm:col-span-2">
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Device (Optional)</label>
+                {{ form.device }}
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3">
+            <a href="{% url 'tasks_list' %}" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition">
+                Cancel
+            </a>
+            <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center space-x-2 shadow-sm">
+                <i class="fa-solid fa-check text-xs"></i>
+                <span>Assign Task</span>
+            </button>
+        </div>
+
+    </form>
+
+</div>
+{% endblock %}

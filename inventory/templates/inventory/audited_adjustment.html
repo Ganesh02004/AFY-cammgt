@@ -1,0 +1,101 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Audited Adjustment — {{ device.asset_id }}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto space-y-6">
+
+    <div class="bg-white p-6 rounded-2xl border border-purple-200 shadow-sm flex items-center justify-between">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
+                    Administrator Privilege
+                </span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Audited Asset Adjustment</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Manually rectify exceptional inventory discrepancies with logged justification.</p>
+        </div>
+        <a href="{% url 'device_detail' device.id %}" class="text-xs font-semibold text-slate-500 hover:text-slate-800">Cancel</a>
+    </div>
+
+    <!-- Current State Box -->
+    <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-2">
+        <div class="flex items-center justify-between">
+            <span class="font-extrabold font-mono text-slate-900 text-sm">{{ device.asset_id }}</span>
+            <span class="font-semibold text-slate-700">{{ device.brand_and_model }}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-slate-600 pt-2 border-t border-slate-200">
+            <div>Current Status: <strong class="text-slate-900">{{ device.get_current_status_display }}</strong></div>
+            <div>Current Custodian: <strong class="text-slate-900">{{ device.custodian_display }}</strong></div>
+        </div>
+    </div>
+
+    <form method="post" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 text-xs">
+        {% csrf_token %}
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">New Controlled Status *</label>
+            {{ form.new_status }}
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">New Custodian Location / Entity *</label>
+            {{ form.new_custodian_type }}
+        </div>
+
+        <div id="user-custodian-field">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Staff Custodian (If User selected)</label>
+            {{ form.new_custodian_user }}
+        </div>
+
+        <div id="worker-custodian-field">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Worker Custodian (If Worker selected)</label>
+            {{ form.new_custodian_worker }}
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-rose-700 uppercase tracking-wider mb-1">Mandatory Audited Justification *</label>
+            {{ form.reason }}
+            <p class="text-[11px] text-slate-400 mt-1">This explanation will be permanently recorded in the immutable movement ledger and audit logs.</p>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3">
+            <a href="{% url 'device_detail' device.id %}" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition">
+                Cancel
+            </a>
+            <button type="submit" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition flex items-center space-x-2 shadow-sm">
+                <i class="fa-solid fa-stamp text-xs"></i>
+                <span>Apply Audited Adjustment</span>
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+    const typeSelect = document.getElementById('custodian-type-select');
+    const userField = document.getElementById('user-custodian-field');
+    const workerField = document.getElementById('worker-custodian-field');
+
+    function toggleCustodianFields() {
+        if (!typeSelect) return;
+        const val = typeSelect.value;
+        if (val === 'USER') {
+            userField.style.display = 'block';
+            workerField.style.display = 'none';
+        } else if (val === 'WORKER') {
+            userField.style.display = 'none';
+            workerField.style.display = 'block';
+        } else {
+            userField.style.display = 'none';
+            workerField.style.display = 'none';
+        }
+    }
+
+    if (typeSelect) {
+        typeSelect.addEventListener('change', toggleCustodianFields);
+        toggleCustodianFields();
+    }
+</script>
+{% endblock %}

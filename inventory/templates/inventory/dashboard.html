@@ -1,0 +1,270 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Dashboard — AFY Portal{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header & Welcome Banner -->
+    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
+                    {{ user.get_role_display }}
+                </span>
+                <span class="text-xs text-slate-400">AFY Camera Inventory Management Live Mediation Hub</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold mt-1 tracking-tight">
+                Hello, {{ user.display_name }}! 👋
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-300 mt-1">
+                You currently hold <strong class="text-white">{{ my_inventory_count }} devices</strong> in your custody inventory.
+                {% if my_pending_transfers > 0 %}
+                <span class="text-amber-300 font-bold ml-1">({{ my_pending_transfers }} transfer(s) awaiting your acceptance)</span>
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Quick Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'qr_scanner' %}" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-2 shadow-md shadow-indigo-900/50">
+                <i class="fa-solid fa-qrcode"></i>
+                <span>Scan Device QR</span>
+            </a>
+            <a href="{% url 'collect_from_client' %}" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center space-x-2 backdrop-blur-sm border border-white/10">
+                <i class="fa-solid fa-cart-flatbed-suitcase text-indigo-300"></i>
+                <span>Collect from Client</span>
+            </a>
+            <a href="{% url 'assign_to_worker' %}" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center space-x-2 backdrop-blur-sm border border-white/10">
+                <i class="fa-solid fa-user-check text-emerald-300"></i>
+                <span>Assign Worker</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Metric Cards Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <!-- Total Master Devices -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow transition">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Master Fleet</span>
+                <i class="fa-solid fa-boxes-stacked text-indigo-500 text-sm"></i>
+            </div>
+            <div class="text-2xl font-extrabold text-slate-900">{{ total_devices }}</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Total registered devices</div>
+        </div>
+
+        <!-- Available Storage Stock -->
+        <div class="bg-white p-4 rounded-2xl border border-emerald-200/80 bg-emerald-50/20 shadow-sm hover:shadow transition">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Available Stock</span>
+                <i class="fa-solid fa-circle-check text-emerald-500 text-sm"></i>
+            </div>
+            <div class="text-2xl font-extrabold text-emerald-700">{{ available_stock }}</div>
+            <div class="text-[10px] text-emerald-600/80 mt-0.5">Ready in storage</div>
+        </div>
+
+        <!-- With Collectors -->
+        <div class="bg-white p-4 rounded-2xl border border-indigo-200/80 bg-indigo-50/20 shadow-sm hover:shadow transition">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-700">With Staff</span>
+                <i class="fa-solid fa-truck-ramp-box text-indigo-500 text-sm"></i>
+            </div>
+            <div class="text-2xl font-extrabold text-indigo-700">{{ with_collectors }}</div>
+            <div class="text-[10px] text-indigo-600/80 mt-0.5">In staff custody</div>
+        </div>
+
+        <!-- Assigned to Workers -->
+        <div class="bg-white p-4 rounded-2xl border border-blue-200/80 bg-blue-50/20 shadow-sm hover:shadow transition">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-blue-700">With Workers</span>
+                <i class="fa-solid fa-user-tag text-blue-500 text-sm"></i>
+            </div>
+            <div class="text-2xl font-extrabold text-blue-700">{{ assigned_workers }}</div>
+            <div class="text-[10px] text-blue-600/80 mt-0.5">Currently active in field</div>
+        </div>
+
+        <!-- Awaiting Inspection -->
+        <div class="bg-white p-4 rounded-2xl border border-purple-200/80 bg-purple-50/20 shadow-sm hover:shadow transition">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-purple-700">Inspections</span>
+                <i class="fa-solid fa-microscope text-purple-500 text-sm"></i>
+            </div>
+            <div class="text-2xl font-extrabold text-purple-700">{{ awaiting_inspection }}</div>
+            <div class="text-[10px] text-purple-600/80 mt-0.5">Returned & pending test</div>
+        </div>
+
+        <!-- Damaged or Lost -->
+        <div class="bg-white p-4 rounded-2xl border border-rose-200/80 bg-rose-50/20 shadow-sm hover:shadow transition">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-rose-700">Damaged / Lost</span>
+                <i class="fa-solid fa-triangle-exclamation text-rose-500 text-sm"></i>
+            </div>
+            <div class="text-2xl font-extrabold text-rose-700">{{ damaged_or_lost }}</div>
+            <div class="text-[10px] text-rose-600/80 mt-0.5">Quarantined / Missing</div>
+        </div>
+    </div>
+
+    <!-- Secondary Status Ribbon -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
+        <div class="flex items-center space-x-6">
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span class="text-slate-600">Pending Transfers: <strong class="text-slate-900">{{ pending_transfers }}</strong></span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
+                <span class="text-slate-600">Pending Pickups: <strong class="text-slate-900">{{ pending_pickups }}</strong></span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full {% if overdue_returns > 0 %}bg-rose-500 animate-pulse{% else %}bg-emerald-500{% endif %}"></span>
+                <span class="text-slate-600">Overdue Returns: <strong class="{% if overdue_returns > 0 %}text-rose-600 font-bold{% else %}text-slate-900{% endif %}">{{ overdue_returns }}</strong></span>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4 text-slate-500">
+            <span>Clients: <strong class="text-slate-700">{{ active_clients }}</strong></span>
+            <span>Workers: <strong class="text-slate-700">{{ active_workers }}</strong></span>
+            <span>Portal Users: <strong class="text-slate-700">{{ active_users }}</strong></span>
+        </div>
+    </div>
+
+    <!-- Main Two-Column Layout: Movements Timeline vs Tasks/Quick Links -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Column 1 & 2: Recent Movements Ledger (Append-only audit) -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-timeline"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-900">Recent Custody Ledger Movements</h2>
+                        <p class="text-[11px] text-slate-500">Live append-only chronological history of custody transfers</p>
+                    </div>
+                </div>
+                <a href="{% url 'reports' %}" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1">
+                    <span>Export Ledger</span>
+                    <i class="fa-solid fa-angle-right text-[10px]"></i>
+                </a>
+            </div>
+
+            <div class="overflow-x-auto flex-grow">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold border-b border-slate-100">
+                        <tr>
+                            <th class="py-3 px-4">Time</th>
+                            <th class="py-3 px-4">Asset ID</th>
+                            <th class="py-3 px-4">From</th>
+                            <th class="py-3 px-4">To</th>
+                            <th class="py-3 px-4">Status Transition</th>
+                            <th class="py-3 px-4">Actor</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for m in recent_movements %}
+                        <tr class="hover:bg-slate-50/70 transition">
+                            <td class="py-3 px-4 text-slate-500 whitespace-nowrap">{{ m.timestamp|date:"M d, H:i" }}</td>
+                            <td class="py-3 px-4 font-bold text-slate-900 whitespace-nowrap">
+                                <a href="{% url 'device_detail' m.device.id %}" class="text-indigo-600 hover:underline">
+                                    {{ m.device.asset_id }}
+                                </a>
+                            </td>
+                            <td class="py-3 px-4 text-slate-600 truncate max-w-[120px]">{{ m.from_custodian_name }}</td>
+                            <td class="py-3 px-4 font-medium text-slate-800 truncate max-w-[130px]">{{ m.to_custodian_name }}</td>
+                            <td class="py-3 px-4">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                    {{ m.to_status }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-slate-500 whitespace-nowrap">{{ m.actor.display_name }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="py-8 text-center text-slate-400 text-xs">No movements recorded yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Column 3: My Tasks & Quick Actions -->
+        <div class="space-y-6">
+            <!-- My Tasks Card -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-list-check text-indigo-600"></i>
+                        <h2 class="text-sm font-bold text-slate-900">My Operational Tasks</h2>
+                    </div>
+                    <a href="{% url 'tasks_list' %}" class="text-xs text-indigo-600 font-semibold hover:underline">View All</a>
+                </div>
+
+                <div class="space-y-2.5">
+                    {% for t in my_tasks %}
+                    <div class="p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition flex items-start justify-between">
+                        <div>
+                            <div class="flex items-center space-x-1.5">
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase
+                                    {% if t.priority == 'URGENT' %}bg-rose-100 text-rose-700
+                                    {% elif t.priority == 'HIGH' %}bg-amber-100 text-amber-700
+                                    {% else %}bg-slate-200 text-slate-700{% endif %}">
+                                    {{ t.priority }}
+                                </span>
+                                <span class="text-xs font-bold text-slate-800">{{ t.title }}</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500 mt-1">
+                                <i class="fa-regular fa-clock text-[9px]"></i> Due: {{ t.scheduled_time|date:"M d, H:i" }}
+                            </p>
+                        </div>
+                        <form method="post" action="{% url 'task_update_status' t.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="status" value="COMPLETED">
+                            <button type="submit" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="Mark Done">
+                                <i class="fa-solid fa-circle-check text-sm"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% empty %}
+                    <div class="p-6 text-center text-slate-400 text-xs">
+                        <i class="fa-solid fa-mug-hot text-2xl text-slate-300 mb-1"></i>
+                        <p>No pending tasks assigned to you!</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Fast Shortcuts -->
+            <div class="bg-gradient-to-br from-indigo-50 to-slate-50 rounded-2xl border border-indigo-100 p-5">
+                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Field Shortcuts</h3>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <a href="{% url 'my_inventory' %}" class="p-3 bg-white rounded-xl border border-slate-200/80 hover:border-indigo-400 hover:shadow-sm transition flex flex-col items-center text-center">
+                        <i class="fa-solid fa-box text-indigo-600 text-lg mb-1"></i>
+                        <span class="font-bold text-slate-800">My Inventory</span>
+                        <span class="text-[10px] text-slate-500">View items held</span>
+                    </a>
+                    <a href="{% url 'qr_scanner' %}" class="p-3 bg-white rounded-xl border border-slate-200/80 hover:border-indigo-400 hover:shadow-sm transition flex flex-col items-center text-center">
+                        <i class="fa-solid fa-camera text-indigo-600 text-lg mb-1"></i>
+                        <span class="font-bold text-slate-800">Scan Camera</span>
+                        <span class="text-[10px] text-slate-500">Scan QR token</span>
+                    </a>
+                    <a href="{% url 'transfer_list' %}" class="p-3 bg-white rounded-xl border border-slate-200/80 hover:border-indigo-400 hover:shadow-sm transition flex flex-col items-center text-center">
+                        <i class="fa-solid fa-arrow-right-arrow-left text-amber-600 text-lg mb-1"></i>
+                        <span class="font-bold text-slate-800">Transfers</span>
+                        <span class="text-[10px] text-slate-500">Accept / Handover</span>
+                    </a>
+                    <a href="{% url 'inspection_queue' %}" class="p-3 bg-white rounded-xl border border-slate-200/80 hover:border-indigo-400 hover:shadow-sm transition flex flex-col items-center text-center">
+                        <i class="fa-solid fa-microscope text-purple-600 text-lg mb-1"></i>
+                        <span class="font-bold text-slate-800">Inspection</span>
+                        <span class="text-[10px] text-slate-500">Return checks</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,435 @@
+{% extends 'inventory/base.html' %}
+{% load inventory_tags %}
+
+{% block title %}Mass Camera Assignment Studio | {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header Banner -->
+    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-bold text-indigo-200 uppercase tracking-wider mb-2">
+                    <i class="fa-solid fa-boxes-stacked text-amber-400"></i>
+                    <span>Bulk Operations Engine</span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Mass Camera Assignment Studio</h1>
+                <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl">
+                    Allocate dozens or hundreds of available body-worn cameras to field workers in a single atomic batch. Retains strict individual custody history, timestamps, and audit movements for every device.
+                </p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <a href="{% url 'builder_object_detail' api_name='mass_camera_assignment' %}" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition flex items-center space-x-2 backdrop-blur-md border border-white/15">
+                    <i class="fa-solid fa-sliders text-indigo-300"></i>
+                    <span>Configure Batch Fields</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 pt-6 border-t border-white/10">
+            <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
+                <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Available in Storage</p>
+                <p class="text-xl sm:text-2xl font-black text-emerald-400 mt-0.5">{{ available_count }}</p>
+            </div>
+            <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
+                <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Active Workers</p>
+                <p class="text-xl sm:text-2xl font-black text-indigo-300 mt-0.5">{{ workers.count }}</p>
+            </div>
+            <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-3 border border-white/10 col-span-2 sm:col-span-1">
+                <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Recent Batches</p>
+                <p class="text-xl sm:text-2xl font-black text-amber-300 mt-0.5">{{ recent_batches.count }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Assignment Form Grid -->
+    <form method="post" id="mass-assignment-form" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Left Col (2 Cols): Device Selection (Checklist + Rapid Scan Box) -->
+            <div class="lg:col-span-2 space-y-6">
+
+                <!-- Rapid Scan / Asset Search Card -->
+                <div class="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm shadow-inner">
+                                <i class="fa-solid fa-barcode"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900">Rapid Scan & Asset Entry</h3>
+                                <p class="text-[11px] text-slate-500">Scan barcode, QR, or paste multiple Asset IDs</p>
+                            </div>
+                        </div>
+                        <span class="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+                            Bulk Input
+                        </span>
+                    </div>
+
+                    <div class="space-y-2">
+                        <textarea name="manual_asset_ids" id="manual_asset_ids" rows="3" placeholder="Scan or enter Asset IDs, Serial numbers, or QR tokens separated by spaces, commas, or new lines...&#10;e.g. CAM-001, CAM-002, CAM-003" class="form-textarea font-mono text-xs"></textarea>
+                        <p class="text-[11px] text-slate-400">
+                            <i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>
+                            Hardware scanner friendly. Scanned tokens will be matched with available storage records automatically.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Available Devices Checklist Table -->
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden space-y-3 p-5 sm:p-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <h3 class="text-sm font-bold text-slate-900">Available Storage Devices</h3>
+                                <span id="selection-counter" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">
+                                    0 selected
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-0.5">Check devices to include in this bulk assignment</p>
+                        </div>
+
+                        <!-- Table Controls -->
+                        <div class="flex items-center space-x-2 text-xs">
+                            <button type="button" onclick="toggleSelectAll(true)" class="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold transition">
+                                Select All
+                            </button>
+                            <button type="button" onclick="toggleSelectAll(false)" class="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold transition">
+                                Clear All
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filter search for the list -->
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" id="device-filter-input" onkeyup="filterDeviceTable()" placeholder="Filter devices by Asset ID, Model, or Serial..." class="form-input pl-8 text-xs">
+                    </div>
+
+                    <!-- Devices Table -->
+                    <div class="max-h-[420px] overflow-y-auto border border-slate-100 rounded-2xl">
+                        <table class="w-full text-left text-xs" id="device-table">
+                            <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 sticky top-0 border-b border-slate-200">
+                                <tr>
+                                    <th class="py-2.5 px-3 w-10 text-center">
+                                        <input type="checkbox" id="master-checkbox" onchange="toggleSelectAll(this.checked)" class="rounded text-indigo-600">
+                                    </th>
+                                    <th class="py-2.5 px-3">Asset ID</th>
+                                    <th class="py-2.5 px-3">Brand & Model</th>
+                                    <th class="py-2.5 px-3">Serial / IMEI</th>
+                                    <th class="py-2.5 px-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100" id="device-tbody">
+                                {% for dev in available_devices %}
+                                <tr class="hover:bg-indigo-50/40 transition device-row cursor-pointer" onclick="toggleRowCheckbox(this, event)">
+                                    <td class="py-2.5 px-3 text-center">
+                                        <input type="checkbox" name="device_ids" value="{{ dev.id }}" class="device-checkbox rounded text-indigo-600" onchange="updateSelectedCount()">
+                                    </td>
+                                    <td class="py-2.5 px-3 font-mono font-bold text-slate-900">{{ dev.asset_id }}</td>
+                                    <td class="py-2.5 px-3 text-slate-700">{{ dev.brand_and_model }}</td>
+                                    <td class="py-2.5 px-3 font-mono text-[11px] text-slate-500">{{ dev.imei_or_serial|default:'&mdash;' }}</td>
+                                    <td class="py-2.5 px-3">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                            {{ dev.get_current_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="py-10 text-center text-xs text-slate-400">
+                                        <i class="fa-solid fa-box-open text-2xl text-slate-300 block mb-2"></i>
+                                        No cameras currently in storage or collector custody available for assignment.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Col (1 Col): Assignment Target & Dynamic Fields -->
+            <div class="space-y-6">
+
+                <!-- Target Worker Card -->
+                <div class="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex items-center space-x-2.5 border-b border-slate-100 pb-3">
+                        <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm shadow-inner">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900">Target Worker</h3>
+                            <p class="text-[11px] text-slate-500">Person receiving camera custody</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                                Worker / Staff Member <span class="text-rose-500 font-extrabold">*</span>
+                            </label>
+                            <select name="target_worker" id="target_worker" required class="form-select text-xs">
+                                <option value="">-- Choose Field Worker --</option>
+                                {% for w in workers %}
+                                <option value="{{ w.id }}">
+                                    {{ w.name }} (ID: {{ w.worker_id }}) &mdash; {{ w.employer_company.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                                Expected Return Date
+                            </label>
+                            <input type="date" name="expected_return_date" id="expected_return_date" class="form-input text-xs">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                                Batch Handover Notes
+                            </label>
+                            <textarea name="notes" id="notes" rows="2" placeholder="e.g. Deployment for Event #102, Shift Alpha" class="form-textarea text-xs"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Custom Fields Configured on Mass Assignment Object -->
+                {% if dynamic_fields %}
+                <div class="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex items-center space-x-2.5 border-b border-slate-100 pb-3">
+                        <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-sm shadow-inner">
+                            <i class="fa-solid fa-shapes"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900">Batch Custom Attributes</h3>
+                            <p class="text-[11px] text-slate-500">Configured dynamic metadata</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        {% for item in dynamic_fields %}
+                        {% with f=item.field choices=item.choices %}
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase">
+                                {{ f.label }}
+                                {% if f.is_required %}<span class="text-rose-500 font-extrabold">*</span>{% endif %}
+                            </label>
+
+                            {% if f.field_type == 'select' %}
+                            <select name="{{ f.api_name }}" id="id_{{ f.api_name }}" {% if f.is_required %}required{% endif %} class="form-select text-xs">
+                                <option value="">-- Select {{ f.label }} --</option>
+                                {% for c in choices %}
+                                <option value="{{ c.value }}">{{ c.label }}</option>
+                                {% endfor %}
+                            </select>
+
+                            {% elif f.field_type == 'radio' %}
+                            <div class="space-y-1 pt-1">
+                                {% for c in choices %}
+                                <label class="inline-flex items-center space-x-2 mr-3 cursor-pointer">
+                                    <input type="radio" name="{{ f.api_name }}" value="{{ c.value }}" {% if f.is_required and forloop.first %}required{% endif %} class="text-indigo-600">
+                                    <span class="text-xs text-slate-700">{{ c.label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+
+                            {% elif f.field_type == 'boolean' %}
+                            <label class="inline-flex items-center space-x-2 cursor-pointer pt-1">
+                                <input type="checkbox" name="{{ f.api_name }}" value="true" class="rounded text-indigo-600">
+                                <span class="text-xs text-slate-700 font-medium">{{ f.help_text|default:f.label }}</span>
+                            </label>
+
+                            {% elif f.field_type == 'textarea' %}
+                            <textarea name="{{ f.api_name }}" id="id_{{ f.api_name }}" placeholder="{{ f.placeholder }}" {% if f.is_required %}required{% endif %} rows="2" class="form-textarea text-xs"></textarea>
+
+                            {% elif f.field_type == 'date' %}
+                            <input type="date" name="{{ f.api_name }}" id="id_{{ f.api_name }}" {% if f.is_required %}required{% endif %} class="form-input text-xs">
+
+                            {% else %}
+                            <input type="text" name="{{ f.api_name }}" id="id_{{ f.api_name }}" placeholder="{{ f.placeholder }}" {% if f.is_required %}required{% endif %} class="form-input text-xs">
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Action Button & Commitment Warning -->
+                <div class="bg-indigo-50/70 rounded-3xl p-5 border border-indigo-100 space-y-4">
+                    <div class="text-xs text-indigo-900 space-y-1">
+                        <p class="font-bold flex items-center">
+                            <i class="fa-solid fa-shield-check text-indigo-600 mr-1.5"></i>
+                            Strict Custody Guarantee
+                        </p>
+                        <p class="text-[11px] text-indigo-700 leading-relaxed">
+                            Each camera will generate an individual <code>Assignment</code> record, change its custodian to the worker, and append an immutable <code>DeviceMovement</code> history audit.
+                        </p>
+                    </div>
+
+                    <button type="submit" id="submit-mass-btn" class="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black shadow-lg shadow-indigo-600/30 transition flex items-center justify-center space-x-2 cursor-pointer">
+                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                        <span>Execute Atomic Mass Assignment</span>
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </form>
+
+    <!-- Recent Batches Table -->
+    {% if recent_batches %}
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900">Recent Assignment Batches</h3>
+                    <p class="text-[11px] text-slate-500">History of bulk allocations and audit outcome logs</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200">
+                    <tr>
+                        <th class="py-2.5 px-3">Batch ID</th>
+                        <th class="py-2.5 px-3">Executed By</th>
+                        <th class="py-2.5 px-3">Total Devices</th>
+                        <th class="py-2.5 px-3">Success / Fail</th>
+                        <th class="py-2.5 px-3">Status</th>
+                        <th class="py-2.5 px-3">Timestamp</th>
+                        <th class="py-2.5 px-3 text-right">Report</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for b in recent_batches %}
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-2.5 px-3 font-mono font-bold text-indigo-600">
+                            <a href="{% url 'mass_assignment_summary' batch_id=b.batch_id %}" class="hover:underline">
+                                {{ b.batch_id }}
+                            </a>
+                        </td>
+                        <td class="py-2.5 px-3 text-slate-700">{{ b.actor.display_name }}</td>
+                        <td class="py-2.5 px-3 font-bold">{{ b.total_devices }}</td>
+                        <td class="py-2.5 px-3">
+                            <span class="text-emerald-600 font-bold">{{ b.successful_assignments }} passed</span>
+                            {% if b.failed_assignments > 0 %}
+                            <span class="text-rose-600 font-bold ml-1">({{ b.failed_assignments }} failed)</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2.5 px-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold 
+                                {% if b.status == 'COMPLETED' %}bg-emerald-100 text-emerald-800
+                                {% elif b.status == 'PARTIAL' %}bg-amber-100 text-amber-800
+                                {% else %}bg-rose-100 text-rose-800{% endif %}">
+                                {{ b.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-slate-500 text-[11px]">{{ b.created_at|date:"M d, Y H:i" }}</td>
+                        <td class="py-2.5 px-3 text-right">
+                            <a href="{% url 'mass_assignment_summary' batch_id=b.batch_id %}" class="py-1 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold inline-flex items-center space-x-1">
+                                <i class="fa-solid fa-file-lines text-slate-500"></i>
+                                <span>View</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Client-side Interactive Logic -->
+<script>
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.device-checkbox:checked');
+    const count = checkboxes.length;
+    const badge = document.getElementById('selection-counter');
+    if (badge) {
+        badge.innerText = `${count} selected`;
+    }
+}
+
+function toggleSelectAll(select) {
+    const checkboxes = document.querySelectorAll('.device-checkbox');
+    checkboxes.forEach(cb => {
+        // Only toggle visible rows if table is filtered
+        const row = cb.closest('tr');
+        if (row && row.style.display !== 'none') {
+            cb.checked = select;
+        }
+    });
+    const master = document.getElementById('master-checkbox');
+    if (master) master.checked = select;
+    updateSelectedCount();
+}
+
+function toggleRowCheckbox(row, event) {
+    // If the click was directly on the checkbox, let native event handle it
+    if (event.target.tagName.toLowerCase() === 'input') {
+        return;
+    }
+    const cb = row.querySelector('.device-checkbox');
+    if (cb) {
+        cb.checked = !cb.checked;
+        updateSelectedCount();
+    }
+}
+
+function filterDeviceTable() {
+    const input = document.getElementById('device-filter-input');
+    const filter = input.value.toLowerCase().trim();
+    const rows = document.querySelectorAll('#device-tbody .device-row');
+
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        if (text.includes(filter)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// Confirmation alert before submitting
+document.getElementById('mass-assignment-form').addEventListener('submit', function(e) {
+    const worker = document.getElementById('target_worker').value;
+    if (!worker) {
+        e.preventDefault();
+        alert('Please select a Target Worker.');
+        return;
+    }
+
+    const selectedCheckboxes = document.querySelectorAll('.device-checkbox:checked').length;
+    const manualText = (document.getElementById('manual_asset_ids').value || '').trim();
+
+    if (selectedCheckboxes === 0 && !manualText) {
+        e.preventDefault();
+        alert('Please select at least one camera device from the list or enter Asset IDs in the Rapid Scan box.');
+        return;
+    }
+
+    const confirmMsg = `Are you sure you want to assign these cameras to the selected worker? This will update custody and movement logs for each camera.`;
+    if (!confirm(confirmMsg)) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Audit Logs — AFY Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
+                    Security Governance
+                </span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">System Audit Logs</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Immutable audit trail of sensitive accesses, custody adjustments, logins, and reports.</p>
+        </div>
+    </div>
+
+    <!-- Search & Filter Card -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <form method="get" class="flex flex-wrap items-center gap-3 text-xs">
+            <div class="relative flex-grow max-w-sm">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                </span>
+                <input type="text" name="q" value="{{ query }}" placeholder="Search actor, action, metadata, ID..." class="form-input pl-9">
+            </div>
+
+            <select name="action" class="form-select max-w-xs">
+                <option value="">All Action Types</option>
+                {% for act in distinct_actions %}
+                <option value="{{ act }}" {% if action_filter == act %}selected{% endif %}>{{ act }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center space-x-1.5 shadow-sm">
+                <i class="fa-solid fa-filter text-xs"></i>
+                <span>Filter</span>
+            </button>
+            <a href="{% url 'audit_logs' %}" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-semibold transition" title="Reset">
+                <i class="fa-solid fa-rotate-left"></i>
+            </a>
+        </form>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between text-xs">
+            <span class="font-bold text-slate-800">Showing last 100 security events</span>
+            <span class="text-slate-400">Append-Only Server Persistence</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold border-b border-slate-100">
+                    <tr>
+                        <th class="py-3 px-4">Timestamp</th>
+                        <th class="py-3 px-4">Actor</th>
+                        <th class="py-3 px-4">Action</th>
+                        <th class="py-3 px-4">Target Record</th>
+                        <th class="py-3 px-4">IP Address</th>
+                        <th class="py-3 px-4">Audit Metadata</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for log in logs %}
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4 text-slate-500 font-mono text-[11px] whitespace-nowrap">
+                            {{ log.timestamp|date:"Y-m-d H:i:s" }}
+                        </td>
+                        <td class="py-3 px-4 font-bold text-slate-800 whitespace-nowrap">
+                            {% if log.actor %}
+                                {{ log.actor.display_name }} ({{ log.actor.username }})
+                            {% else %}
+                                <span class="text-slate-400">System</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold
+                                {% if 'VIEW_SENSITIVE' in log.action %}bg-rose-100 text-rose-800 border border-rose-200
+                                {% elif 'ADJUST' in log.action %}bg-purple-100 text-purple-800 border border-purple-200
+                                {% elif 'LOGIN' in log.action %}bg-blue-100 text-blue-800
+                                {% else %}bg-slate-100 text-slate-700{% endif %}">
+                                {{ log.action }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-slate-600 whitespace-nowrap font-mono text-[11px]">
+                            {{ log.record_type }} #{{ log.record_id }}
+                        </td>
+                        <td class="py-3 px-4 text-slate-400 font-mono text-[11px] whitespace-nowrap">
+                            {{ log.ip_address|default:'127.0.0.1' }}
+                        </td>
+                        <td class="py-3 px-4 text-slate-600 truncate max-w-[280px]" title="{{ log.safe_metadata }}">
+                            {{ log.safe_metadata|default:'—' }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-slate-400">No audit logs found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

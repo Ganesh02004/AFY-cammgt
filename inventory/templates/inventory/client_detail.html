@@ -1,0 +1,208 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}{{ client.name }} — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <div class="flex items-center justify-between">
+        <a href="{% url 'clients_list' %}" class="inline-flex items-center space-x-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back to Clients</span>
+        </a>
+        <a href="{% url 'collect_from_client' %}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-sm">
+            <i class="fa-solid fa-cart-flatbed-suitcase text-xs"></i>
+            <span>New Pickup from {{ client.name }}</span>
+        </a>
+    </div>
+
+    <!-- Client Header Card -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+            <div>
+                <span class="font-mono text-xs font-bold px-2.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    {{ client.code }}
+                </span>
+                <h1 class="text-2xl font-extrabold text-slate-900 mt-1">{{ client.name }}</h1>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-bold self-start sm:self-center {% if client.status == 'ACTIVE' %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-600{% endif %}">
+                Status: {{ client.status }}
+            </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div>
+                <span class="text-slate-400 block text-[10px] font-bold uppercase">Address</span>
+                <span class="font-medium text-slate-800">{{ client.address }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 block text-[10px] font-bold uppercase">City & State</span>
+                <span class="font-medium text-slate-800">{{ client.city }}, {{ client.state }} &mdash; {{ client.pin_code }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 block text-[10px] font-bold uppercase">Partnership Since</span>
+                <span class="font-medium text-slate-800">{{ client.created_at|date:"M d, Y" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Column 1: Points of Contact (POCs) -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                    <i class="fa-solid fa-address-book text-indigo-600"></i>
+                    <span>Points of Contact (POC)</span>
+                </h2>
+                <span class="text-xs text-slate-400 font-semibold">{{ contacts.count }} active</span>
+            </div>
+
+            <div class="space-y-3">
+                {% for contact in contacts %}
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs space-y-1 relative group">
+                    <div class="flex items-center justify-between">
+                        <strong class="text-slate-900 font-bold">{{ contact.name }}</strong>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-[10px] text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded font-medium">{{ contact.designation|default:"POC" }}</span>
+                            <form method="post" action="{% url 'client_contact_delete' contact.id %}" onsubmit="return confirm('Remove contact {{ contact.name }} from this client?')" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" title="Delete contact" class="text-slate-300 hover:text-rose-600 transition p-0.5">
+                                    <i class="fa-solid fa-trash-can text-[11px]"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="text-slate-600 font-mono text-[11px]"><i class="fa-solid fa-phone text-slate-400 text-[10px] mr-1"></i> +91 {{ contact.phone }}</div>
+                    {% if contact.email %}<div class="text-slate-600 text-[11px]"><i class="fa-solid fa-envelope text-slate-400 text-[10px] mr-1"></i> {{ contact.email }}</div>{% endif %}
+                </div>
+                {% empty %}
+                <div class="p-4 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800">
+                    <i class="fa-solid fa-circle-info mr-1"></i> No contacts registered yet. Add a contact person below to enable pickup selection.
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Add Contact Form -->
+            <div class="pt-4 border-t border-slate-100">
+                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-user-plus text-indigo-600"></i>
+                    <span>Add New Contact</span>
+                </h3>
+
+                {% if contact_form.errors %}
+                <div class="p-3 mb-2 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 space-y-1">
+                    <strong class="font-bold">Error adding contact:</strong>
+                    <ul class="list-disc list-inside text-[11px]">
+                        {% for field, errors in contact_form.errors.items %}
+                            {% for error in errors %}
+                            <li>{{ field|title }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <form method="post" class="space-y-2 text-xs">
+                    {% csrf_token %}
+                    <input type="hidden" name="add_contact" value="1">
+                    <input type="hidden" name="client" value="{{ client.id }}">
+                    <input type="hidden" name="is_active" value="on">
+                    <div>
+                        <input type="text" name="name" required placeholder="Full Name *" class="form-input">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" name="designation" placeholder="Designation / Role" class="form-input">
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 font-bold text-[10px]">+91</span>
+                            <input type="tel" name="phone" required placeholder="10-digit mobile *" maxlength="10" pattern="[6-9][0-9]{9}" class="form-input pl-8">
+                        </div>
+                    </div>
+                    <div>
+                        <input type="email" name="email" placeholder="Email Address (optional)" class="form-input">
+                    </div>
+                    <button type="submit" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition shadow-sm flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                        <span>Save Contact Person</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Column 2 & 3: Recent Intake Batches & Associated Devices -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Pickups History -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                    <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-truck-ramp-box text-indigo-600"></i>
+                        <span>Recent Pickup Batches</span>
+                    </h2>
+                </div>
+
+                <div class="divide-y divide-slate-100 text-xs">
+                    {% for p in pickups %}
+                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition">
+                        <div>
+                            <span class="font-bold text-slate-900">Pickup #{{ p.id }}</span>
+                            <span class="text-slate-500 ml-2">Collected by {{ p.collecting_user.display_name }} on {{ p.scheduled_time|date:"M d, Y" }}</span>
+                            <p class="text-[11px] text-slate-400">{{ p.location|default:'Main Facility' }}</p>
+                        </div>
+                        <a href="{% url 'pickup_detail' p.id %}" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition">
+                            View Batch
+                        </a>
+                    </div>
+                    {% empty %}
+                    <div class="p-6 text-center text-slate-400">No pickups recorded for this client.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Devices Provided -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                    <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-camera text-indigo-600"></i>
+                        <span>Active Client Devices ({{ devices.count }})</span>
+                    </h2>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold border-b border-slate-100">
+                            <tr>
+                                <th class="py-2.5 px-4">Asset ID</th>
+                                <th class="py-2.5 px-4">Model</th>
+                                <th class="py-2.5 px-4">Status</th>
+                                <th class="py-2.5 px-4">Custodian</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for d in devices %}
+                            <tr class="hover:bg-slate-50">
+                                <td class="py-2.5 px-4 font-mono font-bold">
+                                    <a href="{% url 'device_detail' d.id %}" class="text-indigo-600 hover:underline">{{ d.asset_id }}</a>
+                                </td>
+                                <td class="py-2.5 px-4">{{ d.brand_and_model }}</td>
+                                <td class="py-2.5 px-4">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border {{ d.status_badge_class }}">
+                                        {{ d.get_current_status_display }}
+                                    </span>
+                                </td>
+                                <td class="py-2.5 px-4 font-semibold text-slate-700">{{ d.custodian_display }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="p-4 text-center text-slate-400">No devices on record.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

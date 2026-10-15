@@ -1,0 +1,78 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Inspection Queue — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Quality Assurance</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Device Inspection Queue</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Technicians inspect returned cameras before clearing them back into storage stock or routing for repair.</p>
+        </div>
+
+        <a href="{% url 'return_process' %}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-sm">
+            <i class="fa-solid fa-rotate-left text-xs"></i>
+            <span>Process New Return</span>
+        </a>
+    </div>
+
+    <!-- Table of Devices Awaiting Inspection -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-900">Pending Technical Inspections ({{ pending_returns.count }})</h2>
+            <span class="text-xs text-slate-400">Locked until outcome determined</span>
+        </div>
+
+        {% if pending_returns %}
+        <div class="divide-y divide-slate-100">
+            {% for r in pending_returns %}
+            <div class="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-slate-50/60 transition">
+                <div class="space-y-1.5 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="font-extrabold font-mono text-slate-900 text-sm">{{ r.device.asset_id }}</span>
+                        <span class="text-slate-700 font-semibold">{{ r.device.brand_and_model }}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">
+                            Awaiting Inspection
+                        </span>
+                    </div>
+
+                    <div class="text-slate-500 space-x-2">
+                        <span>Returned by: <strong class="text-slate-800">{{ r.worker.name }}</strong> ({{ r.worker.worker_id }})</span>
+                        <span>&bull;</span>
+                        <span>Received by: <strong class="text-slate-800">{{ r.receiving_user.display_name }}</strong></span>
+                        <span>&bull;</span>
+                        <span>Return Time: {{ r.return_time|date:"M d, Y - H:i" }}</span>
+                    </div>
+
+                    <div class="text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-200/60 flex items-center space-x-4">
+                        <span>Condition at intake: <strong class="text-slate-800">{{ r.condition }}</strong></span>
+                        <span>Accessories: <strong class="text-slate-800">{{ r.accessories|default:'Standard' }}</strong></span>
+                        {% if r.notes %}<span>Notes: <em>"{{ r.notes }}"</em></span>{% endif %}
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 self-end sm:self-center">
+                    <a href="{% url 'inspection_complete' r.id %}" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                        <i class="fa-solid fa-microscope text-xs"></i>
+                        <span>Inspect & Release</span>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-12 text-center text-slate-400">
+            <i class="fa-solid fa-clipboard-check text-3xl text-slate-300 mb-2"></i>
+            <h3 class="text-sm font-bold text-slate-700">All returned devices have been inspected</h3>
+            <p class="text-xs text-slate-500 mt-1">There are currently no devices waiting in the technical inspection queue.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

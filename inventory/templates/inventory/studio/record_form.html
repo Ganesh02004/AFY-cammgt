@@ -1,0 +1,204 @@
+{% extends 'inventory/base.html' %}
+{% load inventory_tags %}
+
+{% block title %}{% if is_edit %}Edit {{ object.name }}{% else %}New {{ object.name }}{% endif %} | {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+    <!-- Breadcrumb -->
+    <div class="text-xs text-slate-500">
+        <a href="{% url 'dynamic_record_list' api_name=object.api_name %}" class="inline-flex items-center space-x-1 hover:text-indigo-600 font-semibold transition">
+            <i class="fa-solid fa-arrow-left mr-1"></i>
+            <span>Back to {{ object.name }} Directory</span>
+        </a>
+    </div>
+
+    <!-- Form Container -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl space-y-6">
+        
+        <!-- Header -->
+        <div class="border-b border-slate-100 pb-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3.5">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl shadow-inner shrink-0">
+                    <i class="fa-solid {{ object.icon }}"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900">
+                        {% if is_edit %}Edit {{ object.name }}{% else %}New {{ object.name }} Record{% endif %}
+                    </h1>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Please fill in the fields below. Mandatory fields are marked with <span class="text-rose-500 font-bold">*</span>.
+                    </p>
+                </div>
+            </div>
+            {% if user.is_admin %}
+            <a href="{% url 'builder_object_detail' api_name=object.api_name %}" class="py-1.5 px-3 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-indigo-600 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 border border-slate-200">
+                <i class="fa-solid fa-sliders text-indigo-500 text-[10px]"></i>
+                <span>Configure Form</span>
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Global Errors -->
+        {% if errors %}
+        <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 space-y-1">
+            <strong class="font-bold flex items-center"><i class="fa-solid fa-circle-exclamation mr-1.5 text-rose-600"></i> Please correct the following errors:</strong>
+            <ul class="list-disc list-inside space-y-0.5 text-[11px] pt-1">
+                {% for field_key, err in errors.items %}
+                <li><strong>{{ field_key }}:</strong> {{ err }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Dynamic Form -->
+        <form method="post" id="dynamic-record-form" class="space-y-5 text-xs">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {% for item in fields_render_data %}
+                {% with f=item.field choices=item.choices %}
+                <div class="{% if f.field_type == 'textarea' %}sm:col-span-2{% endif %} space-y-1">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase">
+                        {{ f.label }}
+                        {% if f.is_required %}<span class="text-rose-500 font-extrabold">*</span>{% endif %}
+                    </label>
+
+                    {% if f.field_type == 'textarea' %}
+                        <textarea name="{{ f.api_name }}" id="id_{{ f.api_name }}" placeholder="{{ f.placeholder }}" {% if f.is_required %}required{% endif %} rows="3" class="form-textarea text-xs {% if errors and f.api_name in errors %}border-rose-400 bg-rose-50/30{% endif %}">{% if submitted_data %}{{ submitted_data|dict_get:f.api_name }}{% else %}{{ f.default_value }}{% endif %}</textarea>
+
+                    {% elif f.field_type == 'select' %}
+                        <select name="{{ f.api_name }}" id="id_{{ f.api_name }}" {% if f.is_required %}required{% endif %} class="form-select text-xs {% if errors and f.api_name in errors %}border-rose-400 bg-rose-50/30{% endif %}">
+                            <option value="">-- Select {{ f.label }} --</option>
+                            {% for c in choices %}
+                            <option value="{{ c.value }}" {% if submitted_data|dict_get:f.api_name|stringformat:'s' == c.value|stringformat:'s' %}selected{% endif %}>
+                                {{ c.label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+
+                    {% elif f.field_type == 'radio' %}
+                        <div class="space-y-1.5 pt-1">
+                            {% for c in choices %}
+                            <label class="inline-flex items-center space-x-2 mr-4 cursor-pointer">
+                                <input type="radio" name="{{ f.api_name }}" value="{{ c.value }}" {% if submitted_data|dict_get:f.api_name|stringformat:'s' == c.value|stringformat:'s' %}checked{% endif %} {% if f.is_required and forloop.first %}required{% endif %} class="text-indigo-600">
+                                <span class="text-xs text-slate-700 font-medium">{{ c.label }}</span>
+                            </label>
+                            {% empty %}
+                            <span class="text-[11px] text-slate-400">No active choices configured.</span>
+                            {% endfor %}
+                        </div>
+
+                    {% elif f.field_type == 'boolean' %}
+                        <div class="pt-2">
+                            <label class="inline-flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" name="{{ f.api_name }}" value="true" {% if submitted_data|dict_get:f.api_name in 'true,True,1,on' %}checked{% endif %} class="rounded text-indigo-600">
+                                <span class="text-xs text-slate-700 font-semibold">{{ f.help_text|default:f.label }}</span>
+                            </label>
+                        </div>
+
+                    {% elif f.field_type == 'lookup' %}
+                        <select name="{{ f.api_name }}" id="id_{{ f.api_name }}" {% if f.is_required %}required{% endif %} class="form-select text-xs lookup-select {% if f.lookup_object.api_name == 'client' %}lookup-client-source{% elif f.lookup_object.api_name == 'client_contact' %}lookup-contact-target{% endif %} {% if errors and f.api_name in errors %}border-rose-400 bg-rose-50/30{% endif %}">
+                            <option value="">-- Choose {{ f.lookup_object.name|default:'Related Record' }} --</option>
+                            {% for c_id, c_label in choices %}
+                            <option value="{{ c_id }}" {% if submitted_data|dict_get:f.api_name|stringformat:'s' == c_id|stringformat:'s' %}selected{% endif %}>
+                                {{ c_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+
+                    {% elif f.field_type == 'date' %}
+                        <input type="date" name="{{ f.api_name }}" id="id_{{ f.api_name }}" {% if f.is_required %}required{% endif %} value="{% if submitted_data %}{{ submitted_data|dict_get:f.api_name }}{% else %}{{ f.default_value }}{% endif %}" class="form-input text-xs {% if errors and f.api_name in errors %}border-rose-400 bg-rose-50/30{% endif %}">
+
+                    {% elif f.field_type == 'datetime' %}
+                        <input type="datetime-local" name="{{ f.api_name }}" id="id_{{ f.api_name }}" {% if f.is_required %}required{% endif %} value="{% if submitted_data %}{{ submitted_data|dict_get:f.api_name }}{% else %}{{ f.default_value }}{% endif %}" class="form-input text-xs {% if errors and f.api_name in errors %}border-rose-400 bg-rose-50/30{% endif %}">
+
+                    {% elif f.field_type == 'phone' %}
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">+91</span>
+                            <input type="tel" name="{{ f.api_name }}" id="id_{{ f.api_name }}" pattern="[6-9][0-9]{9}" maxlength="10" placeholder="e.g. 9876543210" {% if f.is_required %}required{% endif %} value="{% if submitted_data %}{{ submitted_data|dict_get:f.api_name }}{% else %}{{ f.default_value }}{% endif %}" class="form-input pl-11 text-xs font-mono {% if errors and f.api_name in errors %}border-rose-400 bg-rose-50/30{% endif %}">
+                        </div>
+
+                    {% elif f.field_type == 'email' %}
+                        <input type="email" name="{{ f.api_name }}" id="id_{{ f.api_name }}" placeholder="{{ f.placeholder|default:'name@company.com' }}" {% if f.is_required %}required{% endif %} value="{% if submitted_data %}{{ submitted_data|dict_get:f.api_name }}{% else %}{{ f.default_value }}{% endif %}" class="form-input text-xs {% if errors and f.api_name in errors %}border-rose-400 bg-rose-50/30{% endif %}">
+
+                    {% elif f.field_type == 'number' %}
+                        <input type="number" name="{{ f.api_name }}" id="id_{{ f.api_name }}" placeholder="{{ f.placeholder }}" {% if f.is_required %}required{% endif %} {% if f.min_value %}min="{{ f.min_value }}"{% endif %} {% if f.max_value %}max="{{ f.max_value }}"{% endif %} value="{% if submitted_data %}{{ submitted_data|dict_get:f.api_name }}{% else %}{{ f.default_value }}{% endif %}" class="form-input text-xs {% if errors and f.api_name in errors %}border-rose-400 bg-rose-50/30{% endif %}">
+
+                    {% elif f.field_type == 'readonly' %}
+                        <input type="text" readonly value="{{ submitted_data|dict_get:f.api_name|default:'[System Generated]' }}" class="form-input bg-slate-100 text-slate-500 font-mono text-xs">
+
+                    {% else %}
+                        <input type="text" name="{{ f.api_name }}" id="id_{{ f.api_name }}" placeholder="{{ f.placeholder }}" {% if f.is_required %}required{% endif %} value="{% if submitted_data %}{{ submitted_data|dict_get:f.api_name }}{% else %}{{ f.default_value }}{% endif %}" class="form-input text-xs {% if errors and f.api_name in errors %}border-rose-400 bg-rose-50/30{% endif %}">
+                    {% endif %}
+
+                    {% if errors and f.api_name in errors %}
+                    <span class="text-[10px] text-rose-600 font-bold block">{{ errors|dict_get:f.api_name }}</span>
+                    {% elif f.help_text and f.field_type != 'boolean' %}
+                    <span class="text-[10px] text-slate-400 block">{{ f.help_text }}</span>
+                    {% endif %}
+                </div>
+                {% endwith %}
+                {% endfor %}
+            </div>
+
+            <!-- Submit Button Bar -->
+            <div class="pt-5 border-t border-slate-100 flex items-center justify-between">
+                <a href="{% url 'dynamic_record_list' api_name=object.api_name %}" class="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition">
+                    Cancel
+                </a>
+                <button type="submit" class="py-2.5 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-100 transition flex items-center space-x-2">
+                    <i class="fa-solid fa-check"></i>
+                    <span>{% if is_edit %}Save Changes{% else %}Create {{ object.name }}{% endif %}</span>
+                </button>
+            </div>
+        </form>
+
+    </div>
+
+</div>
+
+<!-- Cascading Client -> Contact Filter Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const clientSelect = document.querySelector('.lookup-client-source') || document.getElementById('id_client');
+    const contactSelect = document.querySelector('.lookup-contact-target') || document.getElementById('id_client_contact');
+
+    if (clientSelect && contactSelect) {
+        clientSelect.addEventListener('change', function() {
+            const clientId = this.value;
+            // Clear current contact options
+            contactSelect.innerHTML = '<option value="">-- Choose Contact --</option>';
+            if (!clientId) return;
+
+            contactSelect.disabled = true;
+            fetch(`/api/builder/client-contacts/?client_id=${clientId}`)
+                .then(res => res.json())
+                .then(data => {
+                    contactSelect.disabled = false;
+                    contactSelect.innerHTML = '<option value="">-- Choose Contact --</option>';
+                    if (data.contacts && data.contacts.length > 0) {
+                        data.contacts.forEach(c => {
+                            const opt = document.createElement('option');
+                            opt.value = c.id;
+                            opt.textContent = `${c.name} (${c.designation}) — ${c.phone}`;
+                            contactSelect.appendChild(opt);
+                        });
+                    } else {
+                        const opt = document.createElement('option');
+                        opt.value = "";
+                        opt.textContent = "No active contacts for selected client";
+                        opt.disabled = true;
+                        contactSelect.appendChild(opt);
+                    }
+                })
+                .catch(err => {
+                    console.error("Cascading contact fetch error:", err);
+                    contactSelect.disabled = false;
+                });
+        });
+    }
+});
+</script>
+{% endblock %}

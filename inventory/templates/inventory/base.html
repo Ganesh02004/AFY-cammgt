@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- HTML5 QR Code Scanner -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <!-- Firebase Web SDK (Compat v9/v10 for robust cross-browser support) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script>
+        // Initialize Firebase Client SDK
+        const firebaseConfig = {
+            apiKey: "{{ FIREBASE_WEB_CONFIG.apiKey }}",
+            authDomain: "{{ FIREBASE_WEB_CONFIG.authDomain }}",
+            databaseURL: "{{ FIREBASE_WEB_CONFIG.databaseURL|default:'https://afy-camera-inventory-default-rtdb.firebaseio.com' }}",
+            projectId: "{{ FIREBASE_WEB_CONFIG.projectId }}",
+            storageBucket: "{{ FIREBASE_WEB_CONFIG.storageBucket }}",
+            messagingSenderId: "{{ FIREBASE_WEB_CONFIG.messagingSenderId }}",
+            appId: "{{ FIREBASE_WEB_CONFIG.appId }}"
+        };
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+        } catch(e) {
+            console.log("Firebase client init notice:", e);
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            padding: 0.55rem 0.75rem;
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.15s ease-in-out;
+            background-color: #ffffff;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased pb-20 md:pb-0">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!-- Brand / Logo -->
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'dashboard' %}" class="flex items-center space-x-2.5">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-700 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-100">
+                            <i class="fa-solid fa-camera-retro text-lg"></i>
+                        </div>
+                        <div>
+                            <span class="text-base font-extrabold tracking-tight text-slate-900 block leading-tight">AFY</span>
+                            <span class="text-[9px] font-bold uppercase tracking-wider text-indigo-600 block">(Any Thing For You) Inventory</span>
+                        </div>
+                    </a>
+
+                    <!-- Desktop Nav Links -->
+                    {% if user.is_authenticated %}
+                    <div class="hidden lg:flex items-center space-x-1 ml-6">
+                        <a href="{% url 'dashboard' %}" class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-slate-50 transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-gauge text-slate-400"></i>
+                            <span>Dashboard</span>
+                        </a>
+
+                        <a href="{% url 'my_inventory' %}" class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-slate-50 transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-box text-slate-400"></i>
+                            <span>My Inventory</span>
+                        </a>
+
+                        {% if user.is_admin %}
+                        <a href="{% url 'master_inventory' %}" class="px-3 py-2 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50/70 border border-indigo-100/50 hover:bg-indigo-100 transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-warehouse text-indigo-600"></i>
+                            <span>Master Inventory</span>
+                        </a>
+                        <a href="{% url 'builder_studio' %}" class="px-3 py-2 rounded-lg text-xs font-bold text-purple-700 bg-purple-50/80 border border-purple-200/70 hover:bg-purple-100 transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles text-purple-600"></i>
+                            <span>Setup Studio</span>
+                        </a>
+                        {% endif %}
+
+                        <a href="{% url 'qr_scanner' %}" class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-slate-50 transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-qrcode text-slate-400"></i>
+                            <span>Scan QR</span>
+                        </a>
+
+                        <!-- Operations Dropdown -->
+                        <div class="relative group">
+                            <button class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-slate-50 transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-arrows-split-up-and-left text-slate-400"></i>
+                                <span>Operations</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                            </button>
+                            <div class="absolute left-0 mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-2 hidden group-hover:block z-50">
+                                <a href="{% url 'collect_from_client' %}" class="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                    <i class="fa-solid fa-cart-flatbed-suitcase w-4 text-slate-400"></i>
+                                    <span>Collect from Client</span>
+                                </a>
+                                <a href="{% url 'assign_to_worker' %}" class="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                    <i class="fa-solid fa-user-check w-4 text-slate-400"></i>
+                                    <span>Assign to Worker</span>
+                                </a>
+                                {% if user.is_admin or user.is_management %}
+                                <a href="{% url 'mass_camera_assignment' %}" class="px-4 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 flex items-center space-x-2">
+                                    <i class="fa-solid fa-boxes-stacked w-4 text-indigo-600"></i>
+                                    <span>Mass Camera Assignment</span>
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'transfer_list' %}" class="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                    <i class="fa-solid fa-arrow-right-arrow-left w-4 text-slate-400"></i>
+                                    <span>Transfers</span>
+                                </a>
+                                <a href="{% url 'return_process' %}" class="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                    <i class="fa-solid fa-rotate-left w-4 text-slate-400"></i>
+                                    <span>Process Return</span>
+                                </a>
+                                <a href="{% url 'inspection_queue' %}" class="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                    <i class="fa-solid fa-clipboard-check w-4 text-slate-400"></i>
+                                    <span>Inspection Queue</span>
+                                </a>
+                                <div class="border-t border-slate-100 my-1"></div>
+                                <a href="{% url 'incident_list' %}" class="px-4 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 flex items-center space-x-2">
+                                    <i class="fa-solid fa-triangle-exclamation w-4 text-rose-500"></i>
+                                    <span>Incidents & Damages</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Entities Dropdown -->
+                        <div class="relative group">
+                            <button class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-slate-50 transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-users-gear text-slate-400"></i>
+                                <span>Directory</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                            </button>
+                            <div class="absolute left-0 mt-1 w-52 bg-white border border-slate-200 rounded-xl shadow-xl py-2 hidden group-hover:block z-50">
+                                <a href="{% url 'clients_list' %}" class="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                    <i class="fa-solid fa-building text-slate-400"></i>
+                                    <span>Clients & POCs</span>
+                                </a>
+                                <a href="{% url 'workers_list' %}" class="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                    <i class="fa-solid fa-id-card-clip text-slate-400"></i>
+                                    <span>Workers & Staffing</span>
+                                </a>
+                                <a href="{% url 'employer_companies_list' %}" class="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                    <i class="fa-solid fa-briefcase text-slate-400"></i>
+                                    <span>Employer Companies</span>
+                                </a>
+                                <a href="{% url 'tasks_list' %}" class="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                    <i class="fa-solid fa-list-check text-slate-400"></i>
+                                    <span>Tasks Management</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <a href="{% url 'reports' %}" class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-slate-50 transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-chart-pie text-slate-400"></i>
+                            <span>Reports</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Right Header Actions (User profile & Role Badge) -->
+                <div class="flex items-center space-x-3">
+                    {% if user.is_authenticated %}
+                    <!-- Role Pill -->
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold 
+                        {% if user.is_admin %}bg-purple-100 text-purple-800 border border-purple-200
+                        {% elif user.is_management %}bg-blue-100 text-blue-800 border border-blue-200
+                        {% else %}bg-emerald-100 text-emerald-800 border border-emerald-200{% endif %}">
+                        <i class="fa-solid {% if user.is_admin %}fa-crown{% elif user.is_management %}fa-shield-halved{% else %}fa-person-walking-luggage{% endif %} mr-1 text-[10px]"></i>
+                        {{ user.get_role_display }}
+                    </span>
+
+                    <!-- User Menu Dropdown -->
+                    <div class="relative group">
+                        <button class="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-slate-100 transition">
+                            {% if user.profile_photo %}
+                            <img src="{{ user.profile_photo.url }}" alt="{{ user.display_name }}" class="w-8 h-8 rounded-full object-cover border border-slate-300">
+                            {% else %}
+                            <div class="w-8 h-8 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center">
+                                {{ user.username|slice:":1"|upper }}
+                            </div>
+                            {% endif %}
+                            <span class="text-xs font-medium text-slate-700 hidden sm:inline">{{ user.display_name }}</span>
+                            <i class="fa-solid fa-angle-down text-slate-400 text-xs"></i>
+                        </button>
+                        <div class="absolute right-0 mt-1 w-52 bg-white border border-slate-200 rounded-xl shadow-xl py-2 hidden group-hover:block z-50">
+                            <div class="px-4 py-2 border-b border-slate-100 flex items-center space-x-2.5">
+                                {% if user.profile_photo %}
+                                <img src="{{ user.profile_photo.url }}" alt="{{ user.display_name }}" class="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0">
+                                {% endif %}
+                                <div class="overflow-hidden">
+                                    <p class="text-xs font-bold text-slate-800 truncate">{{ user.display_name }}</p>
+                                    <p class="text-[11px] text-slate-500 truncate">{{ user.email|default:user.username }}</p>
+                                </div>
+                            </div>
+                            <a href="{% url 'profile' %}" class="px-4 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                <i class="fa-solid fa-id-card text-indigo-500"></i>
+                                <span>My Profile & Location</span>
+                            </a>
+                            <div class="border-t border-slate-100 my-1"></div>
+                            {% if user.is_admin %}
+                            <a href="{% url 'builder_studio' %}" class="px-4 py-2 text-xs text-purple-700 font-bold hover:bg-purple-50 flex items-center space-x-2">
+                                <i class="fa-solid fa-wand-magic-sparkles text-purple-500"></i>
+                                <span>Object & Field Studio</span>
+                            </a>
+                            <a href="{% url 'user_management' %}" class="px-4 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center justify-between">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fa-solid fa-users-gear text-slate-400"></i>
+                                    <span>User Management</span>
+                                </div>
+                                {% if pending_approvals_count > 0 %}
+                                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white animate-pulse">
+                                    {{ pending_approvals_count }}
+                                </span>
+                                {% endif %}
+                            </a>
+                            <a href="{% url 'audit_logs' %}" class="px-4 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                <i class="fa-solid fa-shield-virus text-slate-400"></i>
+                                <span>Audit Logs</span>
+                            </a>
+                            <a href="{% url 'system_reset_data' %}" class="px-4 py-2 text-xs text-rose-700 hover:bg-rose-50 flex items-center space-x-2">
+                                <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
+                                <span>Purge / Reset Data</span>
+                            </a>
+                            <a href="/admin/" target="_blank" class="px-4 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                <i class="fa-solid fa-screwdriver-wrench text-slate-400"></i>
+                                <span>Django Admin</span>
+                            </a>
+                            <div class="border-t border-slate-100 my-1"></div>
+                            {% endif %}
+                            <a href="{% url 'change_password' %}" class="px-4 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2">
+                                <i class="fa-solid fa-key text-slate-400"></i>
+                                <span>Change Password</span>
+                            </a>
+                            <div class="border-t border-slate-100 my-1"></div>
+                            <a href="{% url 'logout' %}" class="px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center space-x-2">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                                <span>Sign Out</span>
+                            </a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <a href="{% url 'login' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition">
+                        Sign In
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Global Messages / Flash Alerts -->
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 no-print">
+        {% for message in messages %}
+        <div class="p-3.5 mb-2 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-between shadow-sm
+            {% if message.tags == 'error' %}bg-rose-50 border border-rose-200 text-rose-800
+            {% elif message.tags == 'success' %}bg-emerald-50 border border-emerald-200 text-emerald-800
+            {% elif message.tags == 'warning' %}bg-amber-50 border border-amber-200 text-amber-800
+            {% else %}bg-blue-50 border border-blue-200 text-blue-800{% endif %}">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid {% if message.tags == 'error' %}fa-circle-xmark text-rose-600{% elif message.tags == 'success' %}fa-circle-check text-emerald-600{% else %}fa-circle-info text-blue-600{% endif %} text-base"></i>
+                <span>{{ message }}</span>
+            </div>
+            <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-600 p-1">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content Block -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Mobile Bottom Navigation Bar (Fixed for Field Workers / Mobile Experience) -->
+    {% if user.is_authenticated %}
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-around items-center z-50 shadow-2xl no-print">
+        <a href="{% url 'dashboard' %}" class="flex flex-col items-center py-1 text-slate-600 hover:text-indigo-600">
+            <i class="fa-solid fa-house text-lg"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Home</span>
+        </a>
+        <a href="{% url 'qr_scanner' %}" class="flex flex-col items-center py-1 text-indigo-600">
+            <div class="w-10 h-10 -mt-5 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-300">
+                <i class="fa-solid fa-qrcode text-lg"></i>
+            </div>
+            <span class="text-[10px] font-bold text-indigo-600 mt-0.5">Scan</span>
+        </a>
+        <a href="{% url 'my_inventory' %}" class="flex flex-col items-center py-1 text-slate-600 hover:text-indigo-600">
+            <i class="fa-solid fa-box text-lg"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Inventory</span>
+        </a>
+        <a href="{% url 'tasks_list' %}" class="flex flex-col items-center py-1 text-slate-600 hover:text-indigo-600">
+            <i class="fa-solid fa-list-check text-lg"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Tasks</span>
+        </a>
+        <a href="{% url 'transfer_list' %}" class="flex flex-col items-center py-1 text-slate-600 hover:text-indigo-600">
+            <i class="fa-solid fa-arrow-right-arrow-left text-lg"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Transfers</span>
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 no-print">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <span>&copy; 2026 <strong>{{ APP_NAME }}</strong> &mdash; Secured by Firebase Realtime Database & Firebase Auth</span>
+            <div class="flex items-center space-x-4">
+                <span>Role: <strong class="text-slate-700">{{ user.get_role_display|default:'Guest' }}</strong></span>
+                <span>Security: <strong>Zero Trust RLS Protected</strong></span>
+            </div>
+        </div>
+    </footer>
+
+    {% if user.is_authenticated %}
+    <!-- 5-Minute Inactivity Session Expiration Modal -->
+    <div id="session-timeout-modal" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 text-center animate-bounce-short">
+            <div class="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4 text-2xl animate-pulse">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">Session Expiring Soon</h3>
+            <p class="text-xs text-slate-500 mb-3">5-Minute Inactivity Security Policy</p>
+            <p class="text-sm text-slate-600 mb-5">
+                You have been inactive for over 4 minutes. For your security, your session will automatically lock in 
+                <span id="session-countdown" class="font-extrabold text-rose-600 text-base">30</span> seconds.
+            </p>
+            <div class="flex items-center space-x-3">
+                <button id="session-stay-btn" type="button" class="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-200 transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>I'm Still Working</span>
+                </button>
+                <a href="{% url 'logout' %}" class="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">
+                    Sign Out
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frontend 5-Minute Inactivity Session Tracker -->
+    <script>
+    (function() {
+        const TIMEOUT_SECONDS = 300; // 5 minutes
+        const WARNING_SECONDS = 30;  // 30 seconds countdown warning
+        let remainingSeconds = TIMEOUT_SECONDS;
+        let timerInterval = null;
+        let lastKeepAliveSent = Date.now();
+        const modal = document.getElementById('session-timeout-modal');
+        const countdownEl = document.getElementById('session-countdown');
+        const stayBtn = document.getElementById('session-stay-btn');
+
+        // Preserve form drafts locally without sensitive fields
+        function preserveFormDrafts() {
+            try {
+                const forms = document.querySelectorAll('form');
+                forms.forEach((form, idx) => {
+                    const data = {};
+                    const elements = form.elements;
+                    for (let el of elements) {
+                        if (!el.name || el.type === 'password' || el.type === 'hidden' || el.name.toLowerCase().includes('csrf') || el.name.toLowerCase().includes('secret')) {
+                            continue;
+                        }
+                        if (el.type === 'checkbox' || el.type === 'radio') {
+                            data[el.name] = el.checked;
+                        } else if (el.value) {
+                            data[el.name] = el.value;
+                        }
+                    }
+                    if (Object.keys(data).length > 0) {
+                        sessionStorage.setItem('afy_draft_' + window.location.pathname + '_' + idx, JSON.stringify(data));
+                    }
+                });
+            } catch (e) {
+                console.warn('Form draft preservation error:', e);
+            }
+        }
+
+        // Restore draft data on reload if safe
+        function restoreFormDrafts() {
+            try {
+                const forms = document.querySelectorAll('form');
+                forms.forEach((form, idx) => {
+                    const key = 'afy_draft_' + window.location.pathname + '_' + idx;
+                    const raw = sessionStorage.getItem(key);
+                    if (raw) {
+                        const data = JSON.parse(raw);
+                        let restoredCount = 0;
+                        for (let k in data) {
+                            const el = form.elements[k];
+                            if (el && !el.value) {
+                                if (el.type === 'checkbox' || el.type === 'radio') {
+                                    el.checked = data[k];
+                                } else {
+                                    el.value = data[k];
+                                }
+                                restoredCount++;
+                            }
+                        }
+                        if (restoredCount > 0) {
+                            sessionStorage.removeItem(key);
+                            const notice = document.createElement('div');
+                            notice.className = 'p-3 mb-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center justify-between shadow-sm';
+                            notice.innerHTML = '<span><i class="fa-solid fa-file-pen mr-1.5 text-amber-600"></i> Restored your unsaved form draft from your previous session.</span><button onclick="this.parentElement.remove()" class="text-amber-500 hover:text-amber-700 ml-2 font-bold">&times;</button>';
+                            form.parentNode.insertBefore(notice, form);
+                        }
+                    }
+                });
+            } catch (e) {}
+        }
+
+        function sendKeepAlive() {
+            fetch('{% url "session_keepalive" %}', {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).catch(() => {});
+        }
+
+        function resetTimer(forcePing = false) {
+            remainingSeconds = TIMEOUT_SECONDS;
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+            const now = Date.now();
+            if (forcePing || (now - lastKeepAliveSent > 60000)) {
+                lastKeepAliveSent = now;
+                sendKeepAlive();
+            }
+        }
+
+        function expireSession() {
+            clearInterval(timerInterval);
+            preserveFormDrafts();
+            window.location.href = "{% url 'login' %}?expired=1";
+        }
+
+        timerInterval = setInterval(function() {
+            remainingSeconds--;
+            if (remainingSeconds <= WARNING_SECONDS && remainingSeconds > 0) {
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    if (countdownEl) countdownEl.textContent = remainingSeconds;
+                }
+            } else if (remainingSeconds <= 0) {
+                expireSession();
+            }
+        }, 1000);
+
+        // Track user activity
+        const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'input'];
+        let lastActivityTracked = 0;
+        activityEvents.forEach(evt => {
+            window.addEventListener(evt, () => {
+                const now = Date.now();
+                if (remainingSeconds > WARNING_SECONDS) {
+                    if (now - lastActivityTracked > 5000) {
+                        lastActivityTracked = now;
+                        resetTimer(false);
+                    }
+                }
+            }, { passive: true });
+        });
+
+        if (stayBtn) {
+            stayBtn.addEventListener('click', function() {
+                resetTimer(true);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', restoreFormDrafts);
+    })();
+    </script>
+    {% endif %}
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

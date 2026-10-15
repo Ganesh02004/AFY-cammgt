@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Label — {{ device.asset_id }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @page {
+            size: 80mm 50mm;
+            margin: 2mm;
+        }
+        body {
+            font-family: monospace, sans-serif;
+            background: #fff;
+            margin: 0;
+            padding: 8px;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen sm:min-h-0">
+
+    <div class="no-print mb-4 flex items-center space-x-2">
+        <button onclick="window.print()" class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg text-xs cursor-pointer shadow hover:bg-indigo-700">
+            Print Sticker Label
+        </button>
+        <button onclick="window.close()" class="px-3 py-2 bg-slate-200 text-slate-700 font-bold rounded-lg text-xs cursor-pointer">
+            Close
+        </button>
+    </div>
+
+    <!-- Sticker Label Card (Standard 80x50mm proportion) -->
+    <div class="w-[78mm] h-[48mm] border-2 border-black p-2 flex flex-col justify-between text-black bg-white rounded-md">
+        <!-- Top row: Company & Asset ID -->
+        <div class="flex items-center justify-between border-b border-black pb-1">
+            <span class="text-[11px] font-black uppercase tracking-tight">AFY Portal</span>
+            <span class="text-[12px] font-black font-mono">{{ device.asset_id }}</span>
+        </div>
+
+        <!-- Middle: QR and Details -->
+        <div class="flex items-center space-x-2 my-1">
+            {% if device.qr_code_image %}
+            <img src="{{ device.qr_code_image.url }}" alt="QR" class="w-24 h-24 object-contain border border-black p-0.5">
+            {% endif %}
+            <div class="text-[9px] flex flex-col justify-center leading-tight space-y-0.5 overflow-hidden">
+                <div class="font-bold truncate max-w-[130px]">{{ device.brand_and_model }}</div>
+                <div>Type: {{ device.get_device_type_display }}</div>
+                <div class="font-mono">SN: {{ device.imei_or_serial|default:'EXEMPT' }}</div>
+                <div>Client: {{ device.source_client.code }}</div>
+                <div class="text-[8px] text-gray-700">Date: {{ device.received_date|date:"Y-m-d" }}</div>
+            </div>
+        </div>
+
+        <!-- Bottom bar: Security Notice -->
+        <div class="text-[7.5px] border-t border-black pt-0.5 text-center font-bold uppercase tracking-wider">
+            Property of {{ device.source_client.name }} &bull; Scan with AFY Camera Inventory Management
+        </div>
+    </div>
+
+    <script>
+        // Auto trigger print prompt on load if desired
+        window.addEventListener('load', () => {
+            // setTimeout(() => window.print(), 300);
+        });
+    </script>
+</body>
+</html>

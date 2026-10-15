@@ -1,0 +1,129 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Reports & Data Exports — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Business Intelligence</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Operational Reports & CSV Exports</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Download real-time database ledgers, custody histories, and audit exports.</p>
+        </div>
+    </div>
+
+    <!-- Reports Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- 1. Master Inventory Export (Admin only) -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+            <div class="space-y-2">
+                <div class="flex items-center space-x-2">
+                    <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-warehouse"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900">Company Master Inventory Ledger</h3>
+                        <span class="text-[10px] text-purple-700 font-bold uppercase bg-purple-50 px-2 py-0.5 rounded border border-purple-200">Admin Only</span>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500">Complete fleet snapshot across all source clients, locations, storage rooms, field workers, and repair bays with full metadata.</p>
+            </div>
+
+            <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">{{ total_devices }} physical devices</span>
+                {% if user.is_admin %}
+                <a href="{% url 'export_csv' 'master_inventory' %}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                    <i class="fa-solid fa-download text-xs"></i>
+                    <span>Download Master CSV</span>
+                </a>
+                {% else %}
+                <span class="text-xs text-slate-400 italic">Admin role required</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 2. Personal My Inventory Export -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+            <div class="space-y-2">
+                <div class="flex items-center space-x-2">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-box"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900">Personal Custody Inventory</h3>
+                        <span class="text-[10px] text-emerald-700 font-bold uppercase bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">User Scoped</span>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500">Export of equipment currently held under your personal custody, including condition, intake serials, and dates.</p>
+            </div>
+
+            <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Scoped to {{ user.username }}</span>
+                <a href="{% url 'export_csv' 'my_inventory' %}" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                    <i class="fa-solid fa-download text-xs"></i>
+                    <span>Download Personal CSV</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 3. Complete Device Movement Ledger -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+            <div class="space-y-2">
+                <div class="flex items-center space-x-2">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-timeline"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900">Device Movements & Custody Ledger</h3>
+                        <span class="text-[10px] text-indigo-700 font-bold uppercase bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">Append-Only Audit</span>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500">Full immutable movement trail documenting every intake, assignment, operational transfer, return, and audited correction.</p>
+            </div>
+
+            <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">{{ total_movements }} recorded transactions</span>
+                {% if user.is_admin %}
+                <a href="{% url 'export_csv' 'movement_ledger' %}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                    <i class="fa-solid fa-download text-xs"></i>
+                    <span>Download Ledger CSV</span>
+                </a>
+                {% else %}
+                <span class="text-xs text-slate-400 italic">Admin role required</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 4. Worker Assignments History -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+            <div class="space-y-2">
+                <div class="flex items-center space-x-2">
+                    <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-id-card-clip"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900">Worker Field Assignments Report</h3>
+                        <span class="text-[10px] text-blue-700 font-bold uppercase bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Operations</span>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500">Chronological history of all devices handed over to workers, expected return schedules, and delivering staff accountability.</p>
+            </div>
+
+            <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">{{ total_assignments }} total assignments</span>
+                <a href="{% url 'export_csv' 'worker_assignments' %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                    <i class="fa-solid fa-download text-xs"></i>
+                    <span>Download Assignments CSV</span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{
+  "rules": {
+    "scanner_sessions": {
+      "$session_id": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "devices": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$asset_id": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "activity_logs": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        }
+      }
+    },
+    "clients": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "workers": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}

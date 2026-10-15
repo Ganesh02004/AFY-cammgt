@@ -1,0 +1,86 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Operational Tasks — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Field Schedule</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Operational Tasks</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Pickups, field deliveries, returns collection, and inspections schedule.</p>
+        </div>
+
+        <a href="{% url 'task_create' %}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-sm">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Create Task</span>
+        </a>
+    </div>
+
+    <!-- Tasks List -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between text-xs">
+            <span class="font-bold text-slate-900">Assigned Tasks ({{ tasks.count }})</span>
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'tasks_list' %}" class="px-2.5 py-1 rounded-lg {% if not status_filter %}bg-indigo-50 text-indigo-700 font-bold{% else %}text-slate-500 hover:bg-slate-100{% endif %}">All</a>
+                <a href="?status=PENDING" class="px-2.5 py-1 rounded-lg {% if status_filter == 'PENDING' %}bg-indigo-50 text-indigo-700 font-bold{% else %}text-slate-500 hover:bg-slate-100{% endif %}">Pending</a>
+                <a href="?status=COMPLETED" class="px-2.5 py-1 rounded-lg {% if status_filter == 'COMPLETED' %}bg-indigo-50 text-indigo-700 font-bold{% else %}text-slate-500 hover:bg-slate-100{% endif %}">Completed</a>
+            </div>
+        </div>
+
+        <div class="divide-y divide-slate-100">
+            {% for t in tasks %}
+            <div class="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-slate-50 transition">
+                <div class="space-y-1.5 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase
+                            {% if t.priority == 'URGENT' %}bg-rose-100 text-rose-800
+                            {% elif t.priority == 'HIGH' %}bg-amber-100 text-amber-800
+                            {% else %}bg-slate-100 text-slate-700{% endif %}">
+                            {{ t.priority }} Priority
+                        </span>
+                        <h3 class="font-bold text-slate-900 text-sm">{{ t.title }}</h3>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold
+                            {% if t.status == 'COMPLETED' %}bg-emerald-100 text-emerald-800
+                            {% elif t.status == 'IN_PROGRESS' %}bg-blue-100 text-blue-800
+                            {% else %}bg-slate-100 text-slate-700{% endif %}">
+                            {{ t.get_status_display }}
+                        </span>
+                    </div>
+
+                    <p class="text-slate-500">
+                        Type: <strong class="text-slate-700">{{ t.get_task_type_display }}</strong>
+                        &bull; Assignee: <strong class="text-indigo-700">{{ t.assigned_user.display_name }}</strong>
+                        &bull; Scheduled: {{ t.scheduled_time|date:"M d, Y - H:i" }}
+                    </p>
+
+                    {% if t.client %}<p class="text-slate-600">Client: {{ t.client.name }}</p>{% endif %}
+                    {% if t.worker %}<p class="text-slate-600">Worker: {{ t.worker.name }} ({{ t.worker.worker_id }})</p>{% endif %}
+                    {% if t.outcome %}<p class="text-emerald-700 font-medium">Outcome: {{ t.outcome }}</p>{% endif %}
+                </div>
+
+                <div class="flex items-center space-x-2 self-end sm:self-center">
+                    {% if t.status != 'COMPLETED' %}
+                    <form method="post" action="{% url 'task_update_status' t.id %}" class="flex items-center space-x-1">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="COMPLETED">
+                        <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1">
+                            <i class="fa-solid fa-check text-xs"></i>
+                            <span>Mark Done</span>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-8 text-center text-slate-400 text-xs">No tasks found matching filter.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

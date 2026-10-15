@@ -1,0 +1,471 @@
+[
+{
+  "model": "inventory.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$1500000$cqtoPOlLdLZoopJiJ0HgHh$2Ukj6NgU8bRJYqkEa1Wsb9FiMJtVWVGVLdULFYkiPvw=",
+    "last_login": "2026-10-14T07:41:02.023Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "System",
+    "last_name": "Administrator",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-10-13T21:03:44.581Z",
+    "role": "ADMIN",
+    "phone": "+91 98200 11223",
+    "email": "admin@afy.local",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "inventory.user",
+  "pk": 7,
+  "fields": {
+    "password": "pbkdf2_sha256$1500000$L9usak1sCcLdK6q7QZTjiO$aybsXS435owF+jX0ychPIpmlmop1Vdkfh4/x3f/dGj4=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "Ganesh",
+    "first_name": "Ganesh",
+    "last_name": "P",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-10-14T07:45:10.808Z",
+    "role": "MANAGEMENT",
+    "phone": "9740246889",
+    "email": "ganeshpurma5@gmail.com",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "inventory.clientcompany",
+  "pk": 4,
+  "fields": {
+    "name": "Awgin",
+    "code": "1212",
+    "address": "HSR layout",
+    "city": "banglore",
+    "state": "karnataka",
+    "pin_code": "560029",
+    "status": "ACTIVE",
+    "created_at": "2026-10-14T04:04:19.279Z",
+    "updated_at": "2026-10-14T04:04:19.279Z"
+  }
+},
+{
+  "model": "inventory.clientcontact",
+  "pk": 9,
+  "fields": {
+    "client": 4,
+    "name": "aparana",
+    "designation": "device distrubuter",
+    "phone": "8073532868",
+    "email": "mcuresoftware@gmail.com",
+    "is_active": true,
+    "created_at": "2026-10-14T07:41:22.258Z"
+  }
+},
+{
+  "model": "inventory.employercompany",
+  "pk": 3,
+  "fields": {
+    "name": "xyz garments",
+    "code": "23233",
+    "address": "BTM 1st stge",
+    "contact_details": "233433444",
+    "status": "ACTIVE",
+    "created_at": "2026-10-14T04:07:33.111Z",
+    "updated_at": "2026-10-14T04:07:33.111Z"
+  }
+},
+{
+  "model": "inventory.employercompany",
+  "pk": 4,
+  "fields": {
+    "name": "AFY",
+    "code": "01",
+    "address": "BTM 1st stage",
+    "contact_details": "8073532868",
+    "status": "ACTIVE",
+    "created_at": "2026-10-14T07:42:17.106Z",
+    "updated_at": "2026-10-14T07:42:17.106Z"
+  }
+},
+{
+  "model": "inventory.worker",
+  "pk": 4,
+  "fields": {
+    "worker_id": "1",
+    "name": "Mubeen",
+    "phone": "9448729283",
+    "email": "mcuresoftware@gmail.com",
+    "address": "BTM 2nd stage",
+    "employer_company": 3,
+    "role_or_status": "Active Field Worker",
+    "aadhaar_number": "",
+    "bank_account_number": "",
+    "bank_ifsc": "",
+    "upi_id": "",
+    "created_at": "2026-10-14T04:09:03.937Z",
+    "updated_at": "2026-10-14T04:09:03.938Z"
+  }
+},
+{
+  "model": "inventory.device",
+  "pk": 8,
+  "fields": {
+    "asset_id": "DEV-2026-0001",
+    "qr_token": "31af5219-3868-4a7a-91a6-fb9e113688aa",
+    "device_type": "SMARTPHONE",
+    "brand_and_model": "iphone15",
+    "imei_or_serial": "12345",
+    "accessories": "charger",
+    "photo": "",
+    "condition": "GOOD",
+    "source_client": 4,
+    "initial_poc": 9,
+    "current_status": "WITH_COLLECTOR",
+    "current_custodian_type": "USER",
+    "current_custodian_user": 7,
+    "current_custodian_worker": null,
+    "received_date": "2026-10-14T07:48:29.998Z",
+    "qr_code_image": "devices/qr/qr_DEV-2026-0001.png",
+    "notes": "good",
+    "created_at": "2026-10-14T07:48:29.998Z",
+    "updated_at": "2026-10-14T07:48:29.998Z"
+  }
+},
+{
+  "model": "inventory.device",
+  "pk": 9,
+  "fields": {
+    "asset_id": "CAM-2026-0002",
+    "qr_token": "3350a125-700f-443d-90b4-10e07cdd1e90",
+    "device_type": "CAMERA",
+    "brand_and_model": "Sony Alpha A7 IV",
+    "imei_or_serial": null,
+    "accessories": "Lens 24-70mm, 2x Battery, Charger, Bag",
+    "photo": "",
+    "condition": "GOOD",
+    "source_client": 4,
+    "initial_poc": 9,
+    "current_status": "WITH_COLLECTOR",
+    "current_custodian_type": "USER",
+    "current_custodian_user": 7,
+    "current_custodian_worker": null,
+    "received_date": "2026-10-14T08:04:04.968Z",
+    "qr_code_image": "devices/qr/qr_CAM-2026-0002_sUC8ljx.png",
+    "notes": "",
+    "created_at": "2026-10-14T08:04:04.968Z",
+    "updated_at": "2026-10-14T08:04:04.968Z"
+  }
+},
+{
+  "model": "inventory.pickup",
+  "pk": 4,
+  "fields": {
+    "client": 4,
+    "actual_poc": 9,
+    "collecting_user": 7,
+    "scheduled_time": "2026-10-14T13:16:00Z",
+    "actual_time": "2026-10-14T07:48:29.996Z",
+    "location": "10th Main Road, Maruthi Layout, J.P Nagar, Bengaluru South City Corporation, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, 560029, India",
+    "latitude": 12.917027,
+    "longitude": 77.606741,
+    "location_address": "10th Main Road, Maruthi Layout, J.P Nagar, Bengaluru South City Corporation, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, 560029, India",
+    "status": "COMPLETED",
+    "notes": "",
+    "created_at": "2026-10-14T07:48:29.996Z"
+  }
+},
+{
+  "model": "inventory.pickup",
+  "pk": 5,
+  "fields": {
+    "client": 4,
+    "actual_poc": 9,
+    "collecting_user": 7,
+    "scheduled_time": "2026-10-14T08:04:04.967Z",
+    "actual_time": "2026-10-14T08:04:04.967Z",
+    "location": "10th Main Road, Maruthi Layout, J.P Nagar, Bengaluru",
+    "latitude": null,
+    "longitude": null,
+    "location_address": "10th Main Road, Maruthi Layout, J.P Nagar, Bengaluru",
+    "status": "COMPLETED",
+    "notes": "",
+    "created_at": "2026-10-14T08:04:04.967Z"
+  }
+},
+{
+  "model": "inventory.pickupdevice",
+  "pk": 7,
+  "fields": {
+    "pickup": 4,
+    "device": 8,
+    "condition_at_collection": "GOOD",
+    "accessories_at_collection": "charger"
+  }
+},
+{
+  "model": "inventory.pickupdevice",
+  "pk": 8,
+  "fields": {
+    "pickup": 5,
+    "device": 9,
+    "condition_at_collection": "GOOD",
+    "accessories_at_collection": "Lens 24-70mm, 2x Battery, Charger, Bag"
+  }
+},
+{
+  "model": "inventory.devicemovement",
+  "pk": 8,
+  "fields": {
+    "device": 8,
+    "from_custodian_type": "USER",
+    "from_custodian_name": "Staff: Ganesh P",
+    "to_custodian_type": "USER",
+    "to_custodian_name": "Staff: Ganesh P",
+    "from_status": "With Collector / In Transit",
+    "to_status": "With Collector / In Transit",
+    "actor": 7,
+    "timestamp": "2026-10-14T07:48:30.012Z",
+    "related_transaction_type": "INTAKE",
+    "related_transaction_id": "4",
+    "notes": "Collected from Awgin (Pickup #4)"
+  }
+},
+{
+  "model": "inventory.devicemovement",
+  "pk": 9,
+  "fields": {
+    "device": 9,
+    "from_custodian_type": "USER",
+    "from_custodian_name": "Staff: Ganesh P",
+    "to_custodian_type": "USER",
+    "to_custodian_name": "Staff: Ganesh P",
+    "from_status": "With Collector / In Transit",
+    "to_status": "With Collector / In Transit",
+    "actor": 7,
+    "timestamp": "2026-10-14T08:04:04.984Z",
+    "related_transaction_type": "INTAKE",
+    "related_transaction_id": "5",
+    "notes": "Collected from Awgin (Pickup #5)"
+  }
+},
+{
+  "model": "inventory.deviceactivitylog",
+  "pk": 1,
+  "fields": {
+    "device": 8,
+    "action": "COLLECTED_FROM_CLIENT",
+    "timestamp": "2026-10-14T07:48:30.013Z",
+    "actor": 7,
+    "actor_name": "Ganesh P",
+    "actor_role": "Management User",
+    "details": "Intake batch from client Awgin (POC: aparana). Condition: GOOD. Accessories: charger",
+    "latitude": 12.917027,
+    "longitude": 77.606741,
+    "location_address": "10th Main Road, Maruthi Layout, J.P Nagar, Bengaluru South City Corporation, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, 560029, India",
+    "related_transaction_type": "PICKUP",
+    "related_transaction_id": "4"
+  }
+},
+{
+  "model": "inventory.deviceactivitylog",
+  "pk": 2,
+  "fields": {
+    "device": 9,
+    "action": "COLLECTED_FROM_CLIENT",
+    "timestamp": "2026-10-14T08:04:04.984Z",
+    "actor": 7,
+    "actor_name": "Ganesh P",
+    "actor_role": "Management User",
+    "details": "Intake batch from client Awgin (POC: aparana). Condition: GOOD. Accessories: Lens 24-70mm, 2x Battery, Charger, Bag",
+    "latitude": null,
+    "longitude": null,
+    "location_address": "10th Main Road, Maruthi Layout, J.P Nagar, Bengaluru",
+    "related_transaction_type": "PICKUP",
+    "related_transaction_id": "5"
+  }
+},
+{
+  "model": "inventory.scannersession",
+  "pk": 1,
+  "fields": {
+    "session_id": "98d9ce9e-b863-4204-9f45-97432d8b4955",
+    "pairing_token": "oHy0MeSo4oBBlwkPg75gLDJUuzirop38",
+    "user": 1,
+    "status": "DISCONNECTED",
+    "created_at": "2026-10-14T03:57:22.004Z",
+    "expires_at": "2026-10-14T04:27:22.003Z",
+    "paired_at": null,
+    "last_scanned_device": null,
+    "last_scanned_token": "",
+    "last_scanned_at": null
+  }
+},
+{
+  "model": "inventory.scannersession",
+  "pk": 2,
+  "fields": {
+    "session_id": "980519c2-fec2-4c9a-bef3-895b965f1337",
+    "pairing_token": "TlWR_f4UnUiZu5PBQ5_kT9XQ3F9yzp2K",
+    "user": 1,
+    "status": "DISCONNECTED",
+    "created_at": "2026-10-14T04:02:44.640Z",
+    "expires_at": "2026-10-14T04:32:44.639Z",
+    "paired_at": null,
+    "last_scanned_device": null,
+    "last_scanned_token": "",
+    "last_scanned_at": null
+  }
+},
+{
+  "model": "inventory.scannersession",
+  "pk": 3,
+  "fields": {
+    "session_id": "77f92840-9836-4c29-90e2-1519f28c4f79",
+    "pairing_token": "SlfnHMALZC5ZOSfKeE3xeOs2Yty-yc5d",
+    "user": 1,
+    "status": "WAITING",
+    "created_at": "2026-10-14T07:41:32.026Z",
+    "expires_at": "2026-10-14T08:11:32.026Z",
+    "paired_at": null,
+    "last_scanned_device": null,
+    "last_scanned_token": "",
+    "last_scanned_at": null
+  }
+},
+{
+  "model": "inventory.auditlog",
+  "pk": 13,
+  "fields": {
+    "actor": 1,
+    "action": "LOGIN",
+    "record_type": "User",
+    "record_id": "1",
+    "timestamp": "2026-10-14T03:49:20.360Z",
+    "safe_metadata": "User admin logged in",
+    "ip_address": "127.0.0.1"
+  }
+},
+{
+  "model": "inventory.auditlog",
+  "pk": 14,
+  "fields": {
+    "actor": null,
+    "action": "USER_REGISTERED",
+    "record_type": "User",
+    "record_id": "6",
+    "timestamp": "2026-10-14T03:49:30.643Z",
+    "safe_metadata": "Self-registered user pending approval (testman, Role: POSTMAN)",
+    "ip_address": "127.0.0.1"
+  }
+},
+{
+  "model": "inventory.auditlog",
+  "pk": 15,
+  "fields": {
+    "actor": 1,
+    "action": "LOGIN",
+    "record_type": "User",
+    "record_id": "1",
+    "timestamp": "2026-10-14T04:00:31.530Z",
+    "safe_metadata": "User admin logged in",
+    "ip_address": "127.0.0.1"
+  }
+},
+{
+  "model": "inventory.auditlog",
+  "pk": 16,
+  "fields": {
+    "actor": 1,
+    "action": "VIEW_SENSITIVE_WORKER_DATA",
+    "record_type": "Worker",
+    "record_id": "1",
+    "timestamp": "2026-10-14T04:09:10.482Z",
+    "safe_metadata": "Admin revealed Aadhaar and Bank account for worker Mubeen",
+    "ip_address": "127.0.0.1"
+  }
+},
+{
+  "model": "inventory.auditlog",
+  "pk": 17,
+  "fields": {
+    "actor": 1,
+    "action": "LOGOUT",
+    "record_type": "User",
+    "record_id": "1",
+    "timestamp": "2026-10-14T07:39:37.655Z",
+    "safe_metadata": "User logged out",
+    "ip_address": "127.0.0.1"
+  }
+},
+{
+  "model": "inventory.auditlog",
+  "pk": 18,
+  "fields": {
+    "actor": 1,
+    "action": "LOGIN",
+    "record_type": "User",
+    "record_id": "1",
+    "timestamp": "2026-10-14T07:41:02.024Z",
+    "safe_metadata": "User admin logged in",
+    "ip_address": "127.0.0.1"
+  }
+},
+{
+  "model": "inventory.auditlog",
+  "pk": 19,
+  "fields": {
+    "actor": 7,
+    "action": "USER_REGISTERED",
+    "record_type": "User",
+    "record_id": "7",
+    "timestamp": "2026-10-14T07:45:11.121Z",
+    "safe_metadata": "Self-registered user pending approval (Ganesh, Role: MANAGEMENT)",
+    "ip_address": "127.0.0.1"
+  }
+},
+{
+  "model": "inventory.auditlog",
+  "pk": 20,
+  "fields": {
+    "actor": 1,
+    "action": "USER_APPROVED",
+    "record_type": "User",
+    "record_id": "7",
+    "timestamp": "2026-10-14T07:45:40.844Z",
+    "safe_metadata": "Admin approved user Ganesh (Management User)",
+    "ip_address": "127.0.0.1"
+  }
+},
+{
+  "model": "inventory.auditlog",
+  "pk": 21,
+  "fields": {
+    "actor": 7,
+    "action": "INTAKE_DEVICES",
+    "record_type": "Pickup",
+    "record_id": "4",
+    "timestamp": "2026-10-14T07:48:42.067Z",
+    "safe_metadata": "Collected 1 devices from Awgin",
+    "ip_address": ""
+  }
+},
+{
+  "model": "inventory.auditlog",
+  "pk": 22,
+  "fields": {
+    "actor": 7,
+    "action": "INTAKE_DEVICES",
+    "record_type": "Pickup",
+    "record_id": "5",
+    "timestamp": "2026-10-14T08:04:10.995Z",
+    "safe_metadata": "Collected 1 devices from Awgin",
+    "ip_address": ""
+  }
+}
+]

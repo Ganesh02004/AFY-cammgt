@@ -1,0 +1,440 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}QR Scanner & Remote Mobile Bridge — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Live Scanning Portal</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">AFY Device QR Scanner</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Scan physical QR codes using your desktop camera, or pair your mobile phone as a wireless barcode scanner without re-logging in.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <span class="px-3 py-1.5 bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 flex items-center space-x-2">
+                <i class="fa-solid fa-wifi text-indigo-500"></i>
+                <span>LAN IP: <strong>{{ lan_ip }}</strong></span>
+            </span>
+        </div>
+    </div>
+
+    <!-- Real-Time Scanned Device Alert Banner (Hidden until scan arrives) -->
+    <div id="live-scanned-card" class="hidden bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border-2 border-emerald-500/30 rounded-2xl p-6 shadow-lg space-y-4 transition-all">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-500/20 pb-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-lg shadow-sm">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Scanned Device Detected</span>
+                    <h2 id="scanned-asset-id" class="text-lg font-black text-slate-900 tracking-tight mt-0.5">CAM-0000</h2>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span id="scanned-status-badge" class="badge badge-emerald">Available</span>
+                <span id="scanned-time-ago" class="text-xs text-slate-500 font-medium">Just now</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div class="bg-white/80 p-3 rounded-xl border border-slate-200/80">
+                <span class="text-[10px] uppercase font-bold text-slate-500 block">Brand & Model</span>
+                <strong id="scanned-model" class="text-slate-800 text-xs block mt-0.5 font-semibold">—</strong>
+            </div>
+            <div class="bg-white/80 p-3 rounded-xl border border-slate-200/80">
+                <span class="text-[10px] uppercase font-bold text-slate-500 block">Serial / IMEI</span>
+                <strong id="scanned-serial" class="font-mono text-slate-800 text-xs block mt-0.5 font-semibold">—</strong>
+            </div>
+            <div class="bg-white/80 p-3 rounded-xl border border-slate-200/80">
+                <span class="text-[10px] uppercase font-bold text-slate-500 block">Condition</span>
+                <strong id="scanned-condition" class="text-slate-800 text-xs block mt-0.5 font-semibold">—</strong>
+            </div>
+            <div class="bg-white/80 p-3 rounded-xl border border-slate-200/80">
+                <span class="text-[10px] uppercase font-bold text-slate-500 block">Current Custodian</span>
+                <strong id="scanned-custodian" class="text-slate-800 text-xs block mt-0.5 font-semibold">—</strong>
+            </div>
+        </div>
+
+        <!-- Quick Action Buttons for the Scanned Device -->
+        <div class="flex flex-wrap items-center gap-2 pt-2">
+            <!-- Dedicated QR Return Button (Requirement 7) -->
+            <a id="btn-quick-return" href="#" class="hidden px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                <i class="fa-solid fa-rotate-left"></i>
+                <span>Confirm Return Collection</span>
+            </a>
+            <a id="btn-assign" href="#" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                <i class="fa-solid fa-user-plus"></i>
+                <span>Assign to Worker</span>
+            </a>
+            <a id="btn-transfer" href="#" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                <span>Transfer Custody</span>
+            </a>
+            <a id="btn-detail" href="#" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                <span>View Device Details & Activity Log</span>
+            </a>
+            <span class="text-[11px] text-emerald-700 font-semibold ml-auto flex items-center">
+                <i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> Ready for next scan...
+            </span>
+        </div>
+    </div>
+
+    <!-- Main Grid: Left = Desktop Camera & Fallback, Right = Connect Mobile Scanner QR -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Column 1: Desktop Camera & Manual Fallback (7 Cols) -->
+        <div class="lg:col-span-7 space-y-6">
+
+            <!-- Scanner Camera Card -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 text-center space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-desktop text-indigo-600 text-sm"></i>
+                        <h2 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Desktop Web Camera</h2>
+                    </div>
+                    <span class="text-[11px] text-slate-400 font-medium">Built-in / USB Camera</span>
+                </div>
+                
+                <!-- Viewfinder Window -->
+                <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video max-w-md mx-auto flex items-center justify-center shadow-inner">
+                    <div id="reader" class="w-full h-full"></div>
+                    
+                    <!-- Target Overlay Guidelines -->
+                    <div id="scanner-overlay" class="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6">
+                        <div class="w-40 h-40 border-2 border-indigo-400/80 rounded-2xl relative shadow-2xl">
+                            <div class="absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 border-indigo-500"></div>
+                            <div class="absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 border-indigo-500"></div>
+                            <div class="absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 border-indigo-500"></div>
+                            <div class="absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 border-indigo-500"></div>
+                        </div>
+                        <span class="text-[10px] text-white/80 font-medium bg-black/60 px-3 py-1 rounded-full mt-3 backdrop-blur-xs">
+                            Center device QR sticker
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-center space-x-3 text-xs">
+                    <button id="btn-start" type="button" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition flex items-center space-x-1.5 shadow-sm">
+                        <i class="fa-solid fa-camera"></i>
+                        <span>Start Desktop Camera</span>
+                    </button>
+                    <button id="btn-stop" type="button" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition hidden flex items-center space-x-1.5">
+                        <i class="fa-solid fa-stop"></i>
+                        <span>Stop Camera</span>
+                    </button>
+                </div>
+
+                <div id="scan-status" class="text-xs text-slate-500 font-medium">
+                    Click 'Start Desktop Camera' or use your phone camera on the right.
+                </div>
+            </div>
+
+            <!-- Fallback Manual Asset Lookup -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-keyboard text-slate-400 text-sm"></i>
+                    <h2 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Manual Lookup Fallback</h2>
+                </div>
+                <p class="text-xs text-slate-500">Enter Asset ID or serial number manually if the physical sticker is damaged:</p>
+                
+                <form method="post" class="flex gap-2">
+                    {% csrf_token %}
+                    <div class="relative flex-grow">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </span>
+                        <input type="text" name="search_term" required placeholder="e.g. CAM-2026-0001 or SN-78291" class="form-input pl-9 font-mono text-xs">
+                    </div>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition whitespace-nowrap">
+                        Lookup
+                    </button>
+                </form>
+            </div>
+
+        </div>
+
+        <!-- Column 2: Connect Mobile Scanner Without Re-Login (5 Cols) -->
+        <div class="lg:col-span-5 space-y-6">
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
+                            <i class="fa-solid fa-mobile-screen-button"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Connect Mobile Scanner</h2>
+                            <span class="text-[10px] text-slate-400">No re-login required on phone</span>
+                        </div>
+                    </div>
+                    <span id="pairing-status-badge" class="badge badge-amber text-[10px]">Waiting for Scan</span>
+                </div>
+
+                <!-- Pairing QR Code Display -->
+                <div class="text-center space-y-3">
+                    <div class="inline-block p-3 bg-white rounded-2xl border-2 border-dashed border-indigo-200 shadow-sm relative group">
+                        <img src="data:image/png;base64,{{ pairing_qr_base64 }}" alt="Mobile Pairing QR" class="w-52 h-52 mx-auto rounded-xl">
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span class="text-white text-xs font-bold px-3 py-1.5 bg-indigo-600 rounded-lg">Scan with Phone Camera</span>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-slate-600 font-medium">
+                        Open your mobile phone camera and point it at this QR code.
+                    </p>
+                </div>
+
+                <!-- Step-by-Step Instructions -->
+                <div class="space-y-2 text-[11px] text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                    <div class="flex items-start space-x-2">
+                        <span class="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
+                        <span>Scan the QR code above with your mobile phone camera.</span>
+                    </div>
+                    <div class="flex items-start space-x-2">
+                        <span class="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
+                        <span>Phone opens the mobile scanner web app (<strong>no login required</strong>).</span>
+                    </div>
+                    <div class="flex items-start space-x-2">
+                        <span class="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">3</span>
+                        <span>Scan device stickers on the phone — the details appear <strong>instantly here on your laptop</strong>.</span>
+                    </div>
+                </div>
+
+                <!-- Direct URL with Copy Button for convenience -->
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Direct Mobile Link (Wi-Fi)</label>
+                    <div class="flex gap-1.5">
+                        <input type="text" id="pairing-url-input" readonly value="{{ pairing_url }}" class="form-input text-[11px] font-mono text-slate-600 bg-slate-50 select-all">
+                        <button type="button" onclick="copyPairingUrl()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold shrink-0">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Session Reset / Disconnect -->
+                <div class="pt-2 flex items-center justify-between border-t border-slate-100 text-xs">
+                    <span class="text-slate-400 text-[11px]">Session ID: <code class="font-mono">{{ scanner_session.session_id|stringformat:".8s" }}...</code></span>
+                    <button type="button" onclick="disconnectScannerSession()" class="text-rose-600 hover:text-rose-700 font-bold text-[11px]">
+                        <i class="fa-solid fa-power-off mr-1"></i>Reset Pairing
+                    </button>
+                </div>
+            </div>
+
+            <!-- Security Notice -->
+            <div class="p-4 bg-indigo-50/60 rounded-xl border border-indigo-100 text-indigo-900 text-[11px] space-y-1">
+                <p><strong><i class="fa-solid fa-shield-halved text-indigo-600 mr-1"></i> Zero-Login Mobile Security:</strong> The mobile phone receives temporary, scoped permissions strictly for capturing barcodes. It cannot access admin tools or alter user settings.</p>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Desktop Camera Logic
+    let html5QrCode = null;
+    const btnStart = document.getElementById('btn-start');
+    const btnStop = document.getElementById('btn-stop');
+    const scanStatus = document.getElementById('scan-status');
+
+    function onScanSuccess(decodedText, decodedResult) {
+        scanStatus.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-check-circle"></i> Device QR detected! Processing...</span>`;
+        // Send scan into the session API to trigger unified handling
+        sendScanToServer(decodedText);
+    }
+
+    function sendScanToServer(val) {
+        const pairingToken = "{{ scanner_session.pairing_token }}";
+        fetch(`/api/scanner/session/${pairingToken}/scan/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ scanned_value: val })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.device) {
+                renderScannedDevice(data.device);
+            } else {
+                handleScanRedirect(val);
+            }
+        })
+        .catch(err => {
+            handleScanRedirect(val);
+        });
+    }
+
+    function handleScanRedirect(payload) {
+        if (payload.includes('/device/qr/') || payload.startsWith('http')) {
+            window.location.href = payload;
+        } else {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{% url 'qr_scanner' %}";
+            const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            form.innerHTML = `
+                <input type="hidden" name="csrfmiddlewaretoken" value="${csrf}">
+                <input type="hidden" name="search_term" value="${payload}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    if (btnStart) {
+        btnStart.addEventListener('click', () => {
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+            scanStatus.textContent = "Requesting desktop camera access...";
+
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                .then(() => {
+                    btnStart.classList.add('hidden');
+                    btnStop.classList.remove('hidden');
+                    scanStatus.textContent = "Camera streaming active. Point at QR code.";
+                })
+                .catch(err => {
+                    scanStatus.innerHTML = `<span class="text-rose-600">Camera error: ${err.message || 'Permission denied'}. Use Mobile Scanner or manual lookup.</span>`;
+                });
+        });
+    }
+
+    if (btnStop) {
+        btnStop.addEventListener('click', () => {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    btnStop.classList.add('hidden');
+                    btnStart.classList.remove('hidden');
+                    scanStatus.textContent = "Camera stopped.";
+                });
+            }
+        });
+    }
+
+    // Remote Mobile Scanner Bridge Poller & Firestore Listener
+    const sessionId = "{{ scanner_session.session_id }}";
+    const pairingBadge = document.getElementById('pairing-status-badge');
+    const liveCard = document.getElementById('live-scanned-card');
+    let lastHandledScanTime = null;
+
+    function renderScannedDevice(dev) {
+        if (!dev) return;
+
+        document.getElementById('scanned-asset-id').textContent = dev.asset_id;
+        document.getElementById('scanned-model').textContent = dev.brand_and_model;
+        document.getElementById('scanned-serial').textContent = dev.imei_or_serial;
+        document.getElementById('scanned-condition').textContent = dev.condition;
+        document.getElementById('scanned-custodian').textContent = dev.custodian;
+
+        const badge = document.getElementById('scanned-status-badge');
+        badge.textContent = dev.current_status;
+        badge.className = `badge ${dev.status_badge_class || 'badge-slate'}`;
+
+        // Configure action buttons
+        document.getElementById('btn-detail').href = dev.detail_url;
+        document.getElementById('btn-assign').href = dev.assign_url;
+        document.getElementById('btn-transfer').href = dev.transfer_url;
+
+        // Requirement 7: Dedicated Return Button if currently assigned to worker
+        const returnBtn = document.getElementById('btn-quick-return');
+        if (dev.is_assigned && dev.return_url) {
+            returnBtn.href = dev.return_url;
+            returnBtn.classList.remove('hidden');
+        } else {
+            returnBtn.classList.add('hidden');
+        }
+
+        liveCard.classList.remove('hidden');
+
+        // Play gentle audio chime if supported
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.3);
+        } catch (e) {}
+
+        // Scroll to the card smoothly
+        liveCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function checkSessionStatus() {
+        fetch(`/api/scanner/session/${sessionId}/status/`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'PAIRED') {
+                    pairingBadge.textContent = "🟢 Mobile Phone Connected";
+                    pairingBadge.className = "badge badge-emerald text-[10px]";
+                } else if (data.status === 'WAITING_PAIR') {
+                    pairingBadge.textContent = "⏳ Waiting for Mobile Scan";
+                    pairingBadge.className = "badge badge-amber text-[10px]";
+                } else if (data.status === 'DISCONNECTED') {
+                    pairingBadge.textContent = "🔴 Disconnected";
+                    pairingBadge.className = "badge badge-rose text-[10px]";
+                }
+
+                if (data.device && data.last_scanned_at && data.last_scanned_at !== lastHandledScanTime) {
+                    lastHandledScanTime = data.last_scanned_at;
+                    renderScannedDevice(data.device);
+                }
+            })
+            .catch(err => console.log("Session polling check:", err));
+    }
+
+    // Start Real-Time Poller
+    const pollerInterval = setInterval(checkSessionStatus, 1500);
+
+    // Firebase Realtime Database Real-Time Scanner Listener
+    try {
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            const rtdb = firebase.database();
+            rtdb.ref('scanner_sessions/' + sessionId).on('value', snapshot => {
+                const data = snapshot.val();
+                if (data) {
+                    if (data.status === 'PAIRED') {
+                        pairingBadge.textContent = "🟢 Mobile Phone Connected";
+                        pairingBadge.className = "badge badge-emerald text-[10px]";
+                    }
+                    if (data.last_scanned_token || data.last_scanned_at || data.last_scanned_device_id) {
+                        checkSessionStatus();
+                    }
+                }
+            });
+        }
+    } catch (e) {
+        console.log("Firebase Realtime Database listener note:", e);
+    }
+
+
+    function copyPairingUrl() {
+        const input = document.getElementById('pairing-url-input');
+        input.select();
+        navigator.clipboard.writeText(input.value);
+        alert("Pairing URL copied to clipboard: " + input.value);
+    }
+
+    function disconnectScannerSession() {
+        if (confirm("Disconnect this mobile pairing session and generate a new code?")) {
+            fetch(`/api/scanner/session/${sessionId}/disconnect/`, { method: 'POST' })
+                .then(() => window.location.reload());
+        }
+    }
+</script>
+{% endblock %}

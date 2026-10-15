@@ -1,0 +1,117 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}My Profile — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-8 px-4">
+    <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-800 p-8 text-white relative">
+            <div class="flex items-center space-x-5">
+                {% if user.profile_photo %}
+                <img src="{{ user.profile_photo.url }}" alt="{{ user.display_name }}" class="w-20 h-20 rounded-2xl object-cover border-4 border-white/20 shadow-lg shrink-0">
+                {% else %}
+                <div class="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl font-black shrink-0 border-2 border-white/30">
+                    {{ user.first_name|slice:":1"|default:"U" }}
+                </div>
+                {% endif %}
+                <div class="min-w-0">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/80 text-white">
+                        <i class="fa-solid fa-check-circle mr-1"></i>Approved {{ user.get_role_display }}
+                    </span>
+                    <h1 class="text-xl sm:text-2xl font-black tracking-tight mt-1 truncate">{{ user.display_name }}</h1>
+                    <p class="text-xs text-indigo-100 truncate">{{ user.email }} &bull; Username: @{{ user.username }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 sm:p-8 space-y-6">
+
+            <!-- Flash Error Messages -->
+            {% if form.errors %}
+            <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 space-y-1">
+                <strong class="font-bold flex items-center"><i class="fa-solid fa-circle-exclamation mr-1.5"></i> Please correct the errors:</strong>
+                <ul class="list-disc list-inside space-y-0.5 text-[11px] pt-1">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                        <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" class="space-y-6 text-xs">
+                {% csrf_token %}
+
+                <!-- Account Information Summary -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <div>
+                        <span class="text-slate-400 block text-[10px] font-bold uppercase">Role & Access Level</span>
+                        <span class="font-bold text-slate-800 text-xs">{{ user.get_role_display }}</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block text-[10px] font-bold uppercase">Account Status</span>
+                        <span class="font-bold text-emerald-600 text-xs"><i class="fa-solid fa-circle-check mr-1"></i>Active & Approved</span>
+                    </div>
+                </div>
+
+                <!-- Editable Fields -->
+                <div class="space-y-4">
+                    <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">
+                        Personal Information
+                    </h2>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">First Name</label>
+                            {{ form.first_name }}
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Last Name</label>
+                            {{ form.last_name }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Mobile Phone (10-Digit)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">+91</span>
+                            {{ form.phone }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Update Profile Photograph</label>
+                        {{ form.profile_photo }}
+                        <span class="text-[10px] text-slate-400 mt-0.5 block">Leave blank to retain current photo. Accepted formats: JPG, PNG, WEBP (Max 5MB).</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Operational / Residential Address</label>
+                        {{ form.address }}
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Assigned Operating Area / Location</label>
+                        {% include 'inventory/location_picker.html' %}
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
+                    <a href="{% url 'change_password' %}" class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-key text-xs"></i>
+                        <span>Change Password</span>
+                    </a>
+                    <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-indigo-100 flex items-center space-x-1.5 cursor-pointer">
+                        <i class="fa-solid fa-save text-xs"></i>
+                        <span>Save Changes</span>
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

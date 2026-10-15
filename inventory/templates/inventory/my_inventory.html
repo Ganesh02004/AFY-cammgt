@@ -1,0 +1,180 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}My Inventory — AFY Portal{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Personal Custody</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">My Current Inventory</h1>
+            <p class="text-xs text-slate-500 mt-1">Physical devices currently held under your personal custody and responsibility.</p>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'export_csv' 'my_inventory' %}" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-file-csv text-emerald-600 text-sm"></i>
+                <span>Export CSV</span>
+            </a>
+            <a href="{% url 'collect_from_client' %}" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>Intake New Devices</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Alert for Incoming Pending Transfers -->
+    {% if incoming_transfers %}
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm">
+        <div class="flex items-center space-x-2.5 mb-3">
+            <i class="fa-solid fa-bell text-amber-600 text-base"></i>
+            <h2 class="text-sm font-bold text-amber-900">
+                You have {{ incoming_transfers.count }} incoming device transfer request(s) waiting for acceptance!
+            </h2>
+        </div>
+        <p class="text-xs text-amber-800 mb-3">Custody remains with the sender until you verify and accept the physical handover below:</p>
+        <div class="space-y-2">
+            {% for t in incoming_transfers %}
+            <div class="bg-white p-3.5 rounded-xl border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-bold text-slate-900">{{ t.device.asset_id }}</span>
+                        <span class="text-xs text-slate-600">({{ t.device.brand_and_model }})</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-0.5">
+                        Sent by: <strong>{{ t.sender.display_name }}</strong> on {{ t.initiated_at|date:"M d, H:i" }} | Condition: <span class="font-medium text-slate-700">{{ t.condition }}</span>
+                    </p>
+                    {% if t.notes %}<p class="text-[10px] text-slate-400 italic">"{{ t.notes }}"</p>{% endif %}
+                </div>
+                <div class="flex items-center space-x-2 self-end sm:self-center">
+                    <a href="{% url 'transfer_action' t.id 'accept' %}" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Accept Custody</span>
+                    </a>
+                    <a href="{% url 'transfer_action' t.id 'reject' %}" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition border border-rose-200">
+                        <span>Reject</span>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Custody Devices Table & Cards -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-900">Devices in Hand ({{ devices_count }})</h2>
+            <span class="text-xs text-slate-500">Only visible to you & company admin</span>
+        </div>
+
+        {% if devices %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold border-b border-slate-100">
+                    <tr>
+                        <th class="py-3 px-4">Asset ID</th>
+                        <th class="py-3 px-4">Device Model</th>
+                        <th class="py-3 px-4">Type</th>
+                        <th class="py-3 px-4">Serial / IMEI</th>
+                        <th class="py-3 px-4">Condition</th>
+                        <th class="py-3 px-4">Source Client</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for d in devices %}
+                    <tr class="hover:bg-slate-50/70 transition">
+                        <td class="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                            <a href="{% url 'device_detail' d.id %}" class="text-indigo-600 hover:underline flex items-center space-x-1.5">
+                                <i class="fa-solid fa-camera text-slate-400 text-[11px]"></i>
+                                <span>{{ d.asset_id }}</span>
+                            </a>
+                        </td>
+                        <td class="py-3.5 px-4 font-medium text-slate-800">{{ d.brand_and_model }}</td>
+                        <td class="py-3.5 px-4 text-slate-500">{{ d.get_device_type_display }}</td>
+                        <td class="py-3.5 px-4 font-mono text-slate-600 text-[11px]">{{ d.imei_or_serial|default:'—' }}</td>
+                        <td class="py-3.5 px-4">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
+                                {{ d.get_condition_display }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-600">{{ d.source_client.name }}</td>
+                        <td class="py-3.5 px-4">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border {{ d.status_badge_class }}">
+                                {{ d.get_current_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end space-x-1.5">
+                                <a href="{% url 'assign_device_to_worker' d.id %}" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition flex items-center space-x-1" title="Assign to Worker">
+                                    <i class="fa-solid fa-user-check text-[11px]"></i>
+                                    <span>Assign</span>
+                                </a>
+                                <a href="{% url 'transfer_initiate' d.id %}" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-xs font-bold transition flex items-center space-x-1" title="Transfer to Colleague">
+                                    <i class="fa-solid fa-arrow-right-arrow-left text-[11px]"></i>
+                                    <span>Transfer</span>
+                                </a>
+                                <a href="{% url 'device_label_print' d.id %}" target="_blank" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="Print QR Label">
+                                    <i class="fa-solid fa-print"></i>
+                                </a>
+                                <a href="{% url 'device_detail' d.id %}" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="View Detail">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-12 text-center text-slate-400">
+            <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-box-open"></i>
+            </div>
+            <h3 class="text-sm font-bold text-slate-700">Your custody inventory is currently empty</h3>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">You do not currently hold any devices in your custody. Use intake to collect cameras from clients or accept incoming transfers.</p>
+            <div class="mt-4">
+                <a href="{% url 'collect_from_client' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition inline-flex items-center space-x-1.5">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>Collect from Client</span>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Outgoing Transfers In Flight -->
+    {% if outgoing_transfers %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <h2 class="text-sm font-bold text-slate-900 mb-3 flex items-center space-x-2">
+            <i class="fa-solid fa-paper-plane text-indigo-600"></i>
+            <span>Outgoing Transfers In Flight ({{ outgoing_transfers.count }})</span>
+        </h2>
+        <p class="text-xs text-slate-500 mb-3">You initiated these transfers. Custody remains yours until the recipient accepts.</p>
+        <div class="space-y-2">
+            {% for t in outgoing_transfers %}
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                <div>
+                    <span class="font-bold text-slate-900">{{ t.device.asset_id }}</span>
+                    <span class="text-slate-600">({{ t.device.brand_and_model }}) &rarr; Designated Receiver: <strong>{{ t.receiver.display_name }}</strong></span>
+                    <span class="text-[10px] text-slate-400 ml-2">Initiated: {{ t.initiated_at|date:"M d, H:i" }}</span>
+                </div>
+                <a href="{% url 'transfer_action' t.id 'cancel' %}" class="px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg border border-rose-200 transition">
+                    Cancel Transfer
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Initiate Custody Transfer — AFY Camera Inventory Management{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto space-y-6">
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Peer Transfer</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Initiate Custody Transfer</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Transfer responsibility of an equipment item to another staff member.</p>
+        </div>
+        <a href="{% url 'my_inventory' %}" class="text-xs font-semibold text-slate-500 hover:text-slate-800">Cancel</a>
+    </div>
+
+    <!-- Device Info Callout -->
+    <div class="p-4 bg-slate-100 rounded-2xl border border-slate-200 flex items-center justify-between text-xs">
+        <div>
+            <span class="text-[10px] uppercase font-bold text-slate-500">Device to Transfer</span>
+            <div class="font-extrabold text-slate-900 text-sm font-mono">{{ device.asset_id }}</div>
+            <div class="text-slate-600">{{ device.brand_and_model }}</div>
+        </div>
+        <div class="text-right">
+            <span class="text-[10px] uppercase font-bold text-slate-500">Current Custody</span>
+            <div class="font-bold text-indigo-700">{{ user.display_name }} (You)</div>
+        </div>
+    </div>
+
+    <form method="post" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        {% csrf_token %}
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Designated Recipient (Staff) *</label>
+            {{ form.receiver }}
+            <p class="text-[11px] text-slate-400 mt-1">Select the colleague receiving physical possession.</p>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Condition of Equipment</label>
+            {{ form.condition }}
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Transfer Notes & Reason</label>
+            {{ form.notes }}
+        </div>
+
+        <!-- Transfer Location -->
+        <div class="space-y-3 pt-2 border-t border-slate-100">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Handover Location (GPS & Address)</label>
+            {{ form.latitude }}
+            {{ form.longitude }}
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">Handover Street / Office Address</label>
+                {{ form.location_address }}
+            </div>
+            {% include 'inventory/location_picker.html' %}
+        </div>
+
+        <!-- Spec rule warning -->
+        <div class="p-4 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+            <div class="font-bold flex items-center space-x-1.5">
+                <i class="fa-solid fa-handshake-angle text-amber-600"></i>
+                <span>Strict Custody Guarantee:</span>
+            </div>
+            <p class="text-[11px] text-amber-800">
+                Custody remains legally in YOUR inventory until the recipient signs in and clicks <strong>"Accept Custody"</strong>.
+            </p>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3">
+            <a href="{% url 'my_inventory' %}" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition">
+                Cancel
+            </a>
+            <button type="submit" class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm">
+                <i class="fa-solid fa-paper-plane text-xs"></i>
+                <span>Initiate Transfer Request</span>
+            </button>
+        </div>
+
+    </form>
+
+</div>
+{% endblock %}
