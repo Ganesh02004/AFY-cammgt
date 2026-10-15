@@ -993,10 +993,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const client = clients.find(c => c.id === clientId);
     if (!client) return { success: false, error: "Client not found." };
 
-    // Check IMEI duplicates across existing devices
-    for (const d of devicesData) {
-      if (d.imei_or_serial && devices.some(ex => ex.imei_or_serial && ex.imei_or_serial.toLowerCase() === d.imei_or_serial!.toLowerCase())) {
-        return { success: false, error: `Device with IMEI/Serial '${d.imei_or_serial}' already exists in system.` };
+    // Validate mandatory Serial Number / IMEI and check duplicates
+    for (let i = 0; i < devicesData.length; i++) {
+      const d = devicesData[i];
+      if (!d.imei_or_serial || !d.imei_or_serial.trim()) {
+        return { success: false, error: `Device #${i + 1}: Serial Number / IMEI is mandatory.` };
+      }
+      const serialTrimmed = d.imei_or_serial.trim();
+      if (devices.some(ex => ex.imei_or_serial && ex.imei_or_serial.toLowerCase() === serialTrimmed.toLowerCase())) {
+        return { success: false, error: `A device with Serial Number / IMEI '${serialTrimmed}' already exists in the system.` };
       }
     }
 

@@ -112,10 +112,13 @@ def intake_devices(client, collecting_user, devices_data, actual_poc=None, sched
             count = Device.objects.count() + 1 + len(created_devices)
             asset_id = f"{prefix}-{timezone.now().year}-{count:04d}"
 
-        imei = item.get('imei_or_serial', '').strip() or None
-        if imei and not item.get('allow_duplicate_serial', False):
-            if Device.objects.filter(imei_or_serial=imei).exists():
-                raise ValidationError(f"A device with IMEI/Serial '{imei}' already exists. Please verify.")
+        imei = item.get('imei_or_serial', '').strip()
+        if not imei:
+            raise ValidationError("Serial Number / IMEI is mandatory for all intake equipment.")
+
+        if not item.get('allow_duplicate_serial', False):
+            if Device.objects.filter(imei_or_serial__iexact=imei).exists():
+                raise ValidationError(f"A device with Serial Number / IMEI '{imei}' already exists in the system.")
 
         device = Device(
             asset_id=asset_id,

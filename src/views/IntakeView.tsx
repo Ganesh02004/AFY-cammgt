@@ -126,6 +126,10 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
         setErrorMsg(`Row #${i + 1}: Brand & Model is required.`);
         return;
       }
+      if (!row.imei_or_serial || !row.imei_or_serial.trim()) {
+        setErrorMsg(`Row #${i + 1}: Serial Number / IMEI is mandatory.`);
+        return;
+      }
     }
 
     const res = intakeDevices({
@@ -413,10 +417,11 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
                   {/* Serial / IMEI */}
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                      Serial / IMEI
+                      Serial / IMEI <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
+                      required
                       value={row.imei_or_serial}
                       onChange={(e) => updateRow(row.id, 'imei_or_serial', e.target.value)}
                       placeholder="e.g. SN-SONY-77801"
