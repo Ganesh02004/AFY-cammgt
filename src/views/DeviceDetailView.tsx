@@ -205,8 +205,18 @@ export const DeviceDetailView: React.FC<DeviceDetailViewProps> = ({ deviceId, on
                 <span className="font-medium text-slate-800">{new Date(device.received_date).toLocaleDateString()}</span>
               </div>
               <div className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 col-span-2">
-                <span className="text-slate-400 block mb-0.5">Accessories Checked</span>
-                <span className="font-medium text-slate-800">{device.accessories || 'Standard equipment bundle'}</span>
+                <span className="text-slate-400 block mb-1">Accessories Checked</span>
+                <div className="flex flex-wrap gap-1">
+                  {device.accessories ? (
+                    device.accessories.split(',').map((acc, idx) => (
+                      <span key={idx} className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold text-[11px] border border-indigo-100">
+                        {acc.trim()}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="font-medium text-slate-500">Standard equipment bundle</span>
+                  )}
+                </div>
               </div>
             </div>
 

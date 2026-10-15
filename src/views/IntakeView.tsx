@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { LocationPicker } from '../components/common/LocationPicker';
+import { AccessoryMultiSelect } from '../components/common/AccessoryMultiSelect';
 import { DeviceCondition, DeviceType } from '../types';
 
 interface IntakeViewProps {
@@ -18,6 +19,7 @@ interface DeviceRow {
   brand_and_model: string;
   imei_or_serial: string;
   accessories: string;
+  selected_accessories: string[];
   condition: DeviceCondition;
   notes: string;
 }
@@ -49,7 +51,8 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
       device_type: 'CAMERA',
       brand_and_model: 'Sony Alpha 7 IV',
       imei_or_serial: '',
-      accessories: 'Charger, 2x Batteries, Lens, Bag',
+      accessories: 'Adapter, Battery, Charger',
+      selected_accessories: ['Adapter', 'Battery', 'Charger'],
       condition: 'EXCELLENT',
       notes: ''
     }
@@ -63,7 +66,6 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
 
   const handleClientChange = (newClientId: number) => {
     setSelectedClientId(newClientId);
-    // Clear previously selected POC when client changes (dynamic specification rule 6)
     setSelectedPocId(0);
   };
 
@@ -76,7 +78,8 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
         device_type: 'CAMERA',
         brand_and_model: '',
         imei_or_serial: '',
-        accessories: 'Charger, Battery',
+        accessories: 'Adapter, Battery',
+        selected_accessories: ['Adapter', 'Battery'],
         condition: 'GOOD',
         notes: ''
       }
@@ -145,7 +148,7 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
         device_type: d.device_type,
         brand_and_model: d.brand_and_model.trim(),
         imei_or_serial: d.imei_or_serial.trim() || undefined,
-        accessories: d.accessories,
+        accessories: (d.selected_accessories && d.selected_accessories.length > 0) ? d.selected_accessories.join(', ') : (d.accessories || 'None'),
         condition: d.condition,
         notes: d.notes
       }))
@@ -185,7 +188,8 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
                 device_type: 'CAMERA',
                 brand_and_model: '',
                 imei_or_serial: '',
-                accessories: 'Charger, Battery',
+                accessories: 'Adapter, Battery',
+                selected_accessories: ['Adapter', 'Battery'],
                 condition: 'GOOD',
                 notes: ''
               }]);
@@ -446,17 +450,14 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
                     </select>
                   </div>
 
-                  {/* Accessories */}
+                  {/* Multi-Select Accessories */}
                   <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                      Accessories Included
-                    </label>
-                    <input
-                      type="text"
-                      value={row.accessories}
-                      onChange={(e) => updateRow(row.id, 'accessories', e.target.value)}
-                      placeholder="e.g. Charger, USB-C Cable, 64GB SD Card, Lens 28-70mm"
-                      className="form-input text-xs"
+                    <AccessoryMultiSelect
+                      selectedAccessories={row.selected_accessories || []}
+                      onChange={(accs) => {
+                        updateRow(row.id, 'selected_accessories', accs);
+                        updateRow(row.id, 'accessories', accs.join(', '));
+                      }}
                     />
                   </div>
 
