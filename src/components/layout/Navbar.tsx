@@ -304,8 +304,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenS
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer"
                   >
-                    <div className="w-8 h-8 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center shadow-sm">
-                      {currentUser.first_name ? currentUser.first_name[0] : currentUser.username[0].toUpperCase()}
+                    <div className="w-8 h-8 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0 overflow-hidden border border-slate-200">
+                      {currentUser.profile_photo ? (
+                        <img src={currentUser.profile_photo} alt={currentUser.username} className="w-full h-full object-cover" />
+                      ) : (
+                        currentUser.first_name ? currentUser.first_name[0] : currentUser.username[0].toUpperCase()
+                      )}
                     </div>
                     <span className="text-xs font-medium text-slate-700 hidden sm:inline">
                       {currentUser.first_name} {currentUser.last_name}

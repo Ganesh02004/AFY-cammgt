@@ -171,8 +171,12 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                 <tr key={u.id} className="hover:bg-slate-50/70 transition">
                   <td className="py-3 px-4">
                     <div className="flex items-center space-x-2.5">
-                      <div className="w-8 h-8 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center">
-                        {u.first_name ? u.first_name[0] : u.username[0].toUpperCase()}
+                      <div className="w-8 h-8 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden border border-slate-200">
+                        {u.profile_photo ? (
+                          <img src={u.profile_photo} alt={u.username} className="w-full h-full object-cover" />
+                        ) : (
+                          u.first_name ? u.first_name[0] : u.username[0].toUpperCase()
+                        )}
                       </div>
                       <div>
                         <div className="font-bold text-slate-900">{u.first_name} {u.last_name}</div>
