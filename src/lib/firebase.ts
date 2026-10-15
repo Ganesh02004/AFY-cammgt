@@ -19,8 +19,11 @@ const firebaseConfig = {
   databaseURL: "https://afy-camera-inventory-default-rtdb.firebaseio.com/"
 };
 
+import { getDatabase, ref, set, get, onValue, update, remove, child } from 'firebase/database';
+
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+export const db = getDatabase(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
@@ -28,5 +31,7 @@ export {
   signInWithPopup, 
   fbSignOut, 
   createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword 
+  signInWithEmailAndPassword,
+  ref, set, get, onValue, update, remove, child
 };
+

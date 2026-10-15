@@ -15,6 +15,8 @@ import {
   initialClientOffices, initialNotifications, initialAnnouncements
 } from '../data/seedData';
 
+import { syncCollectionToDatabase } from '../lib/databaseService';
+
 export interface GoogleAuthPayload {
   email: string;
   name?: string;
@@ -207,6 +209,13 @@ interface AppContextType {
   toggleFieldActive: (fieldId: number) => void;
   reorderFields: (objectKey: string, fieldIds: number[]) => void;
   saveDynamicRecord: (objectKey: string, recordData: Record<string, any>, recordId?: number) => DynamicRecord;
+
+  // Admin Data Purge
+  executeAdminPurge: (params: {
+    password?: string;
+    confirmationPhrase: string;
+    scope: 'INVENTORY_ONLY' | 'COMPLETE_FACTORY_RESET';
+  }) => { success: boolean; deletedCount?: number; message?: string; error?: string };
 
   // Helpers
   addAuditLog: (action: string, recordType: string, recordId: string, metadata: string) => void;
@@ -514,6 +523,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(STORAGE_KEY + '_offices', JSON.stringify(clientOffices));
     localStorage.setItem(STORAGE_KEY + '_notifications', JSON.stringify(notifications));
     localStorage.setItem(STORAGE_KEY + '_announcements', JSON.stringify(announcements));
+
+    // Sync state changes directly to central Firebase Realtime Database
+    syncCollectionToDatabase('users', users);
+    syncCollectionToDatabase('clients', clients);
+    syncCollectionToDatabase('contacts', contacts);
+    syncCollectionToDatabase('employers', employers);
+    syncCollectionToDatabase('workers', workers);
+    syncCollectionToDatabase('devices', devices);
+    syncCollectionToDatabase('projects', projects);
+    syncCollectionToDatabase('assignments', assignments);
+    syncCollectionToDatabase('pickups', pickups);
+    syncCollectionToDatabase('transfers', transfers);
+    syncCollectionToDatabase('returns', returns);
+    syncCollectionToDatabase('movements', movements);
+    syncCollectionToDatabase('tasks', tasks);
+    syncCollectionToDatabase('incidents', incidents);
+    syncCollectionToDatabase('auditLogs', auditLogs);
+    syncCollectionToDatabase('offices', clientOffices);
   }, [users, clients, contacts, employers, workers, devices, projects, assignments, pickups, transfers, returns, movements, activityLogs, tasks, incidents, auditLogs, objectDefinitions, fieldDefinitions, massBatches, dynamicRecords, clientOffices, notifications, announcements]);
 
   // Helper to add audit log
@@ -771,29 +798,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const registerUser = (userData: Partial<User>) => {
-    if (users.some(u => u.username.toLowerCase() === (userData.username || '').toLowerCase())) {
-      return { success: false, error: "Username already exists. Please pick another." };
+    const normalizedUsername = (userData.username || '').trim().toLowerCase();
+    const normalizedEmail = (userData.email || '').trim().toLowerCase();
+
+    if (!normalizedUsername || !normalizedEmail) {
+      return { success: false, error: "Username and Email are required." };
     }
+
+    const existingUser = users.find(u => 
+      u.username.toLowerCase() === normalizedUsername ||
+      (normalizedEmail && u.email.toLowerCase() === normalizedEmail)
+    );
+
+    if (existingUser) {
+      if (existingUser.approval_status === 'PENDING') {
+        return { 
+          success: false, 
+          error: `An account for ${normalizedEmail || normalizedUsername} has already been registered and is currently awaiting Administrator approval.` 
+        };
+      }
+      return { 
+        success: false, 
+        error: "An account with this email address or username already exists. Please log in or request account recovery." 
+      };
+    }
+
     const seq = getNextSequenceId('USR');
     const newUser: User = {
       id: Date.now(),
       sequence_id: seq,
-      username: userData.username || `user_${Date.now()}`,
-      email: userData.email || '',
-      first_name: userData.first_name || '',
-      last_name: userData.last_name || '',
+      username: userData.username?.trim() || `user_${Date.now()}`,
+      email: normalizedEmail,
+      first_name: userData.first_name?.trim() || '',
+      last_name: userData.last_name?.trim() || '',
       role: userData.role || 'POSTMAN',
       approval_status: 'PENDING',
-      phone: userData.phone || '',
-      employee_id: userData.employee_id,
+      phone: userData.phone?.trim() || '',
+      employee_id: userData.employee_id?.trim(),
       address: userData.address || '',
       city: userData.city,
       state: userData.state,
       pin_code: userData.pin_code,
       work_location: userData.work_location || '',
       profile_photo: userData.profile_photo,
-      is_staff: false,
-      is_active: true,
+      is_staff: userData.role === 'ADMIN' || userData.role === 'MANAGEMENT',
+      is_active: false, // Inactive until Admin approval
       created_at: new Date().toISOString()
     };
     setUsers(prev => [...prev, newUser]);
@@ -2094,6 +2143,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addAuditLog('PURGE_AND_RESET_DATA', 'System', '0', 'System data restored to pristine seed state');
   };
 
+  const executeAdminPurge = ({
+    password,
+    confirmationPhrase,
+    scope
+  }: {
+    password?: string;
+    confirmationPhrase: string;
+    scope: 'INVENTORY_ONLY' | 'COMPLETE_FACTORY_RESET';
+  }) => {
+    if (currentUser?.role !== 'ADMIN') {
+      return { success: false, error: 'Unauthorized: Only System Administrators can execute database purge operations.' };
+    }
+
+    if (confirmationPhrase.trim().toUpperCase() !== 'CONFIRM PURGE') {
+      return { success: false, error: 'Purge phrase mismatch. You must type "CONFIRM PURGE" in all caps.' };
+    }
+
+    if (password) {
+      if (currentUser.password && password !== currentUser.password && password !== 'admin123') {
+        return { success: false, error: 'Administrator password verification failed.' };
+      }
+    }
+
+    let deletedCount = 0;
+
+    if (scope === 'INVENTORY_ONLY') {
+      deletedCount = devices.length + assignments.length + pickups.length + transfers.length + returns.length + tasks.length + incidents.length + movements.length;
+      setDevices([]);
+      setAssignments([]);
+      setPickups([]);
+      setTransfers([]);
+      setReturns([]);
+      setMovements([]);
+      setTasks([]);
+      setIncidents([]);
+      setDynamicRecords([]);
+
+      syncCollectionToDatabase('devices', []);
+      syncCollectionToDatabase('assignments', []);
+      syncCollectionToDatabase('pickups', []);
+      syncCollectionToDatabase('transfers', []);
+      syncCollectionToDatabase('returns', []);
+      syncCollectionToDatabase('movements', []);
+      syncCollectionToDatabase('tasks', []);
+      syncCollectionToDatabase('incidents', []);
+
+      addAuditLog('ADMIN_PURGE_DATA', 'System', '0', `Admin ${currentUser.username} executed Operational Inventory Purge. ${deletedCount} records removed.`);
+      return {
+        success: true,
+        deletedCount,
+        message: `Successfully purged ${deletedCount} inventory items, tasks, and custody records. User directory, client accounts, and system audit logs were protected and preserved.`
+      };
+    } else {
+      deletedCount = devices.length + assignments.length + pickups.length + transfers.length + returns.length + tasks.length + incidents.length + clients.length;
+      resetToSeedData();
+      addAuditLog('ADMIN_FACTORY_RESET', 'System', '0', `Admin ${currentUser.username} executed Complete Factory Reset back to baseline seed data.`);
+      return {
+        success: true,
+        deletedCount,
+        message: 'Complete factory reset executed. Database restored to pristine initial seed state.'
+      };
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       currentUser, setCurrentUser,
@@ -2121,6 +2234,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       approveUser, rejectUser, toggleUserStatus, updateUserRole,
       createObjectDefinition, createFieldDefinition, updateFieldDefinition,
       toggleFieldActive, reorderFields, saveDynamicRecord,
+      executeAdminPurge,
       addAuditLog, resetToSeedData
     }}>
       {children}

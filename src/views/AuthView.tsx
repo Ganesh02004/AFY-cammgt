@@ -30,6 +30,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
   const [regPhone, setRegPhone] = useState('');
   const [regRole, setRegRole] = useState<UserRole>('POSTMAN');
   const [regEmpId, setRegEmpId] = useState('');
+  const [regPhoto, setRegPhoto] = useState<string>('');
+  const [regPhotoPreview, setRegPhotoPreview] = useState<string>('');
   const [regMsg, setRegMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   // Google Authentication State
@@ -189,11 +191,39 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
     setLoginError('');
   };
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setRegMsg({ type: 'error', text: 'Please upload a valid image file (JPEG, PNG, WebP).' });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setRegMsg({ type: 'error', text: 'Profile picture must be less than 5MB in size.' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setRegPhoto(result);
+      setRegPhotoPreview(result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegMsg(null);
     if (!regUsername.trim() || !regEmail.trim()) {
       setRegMsg({ type: 'error', text: 'Username and Email are required.' });
+      return;
+    }
+
+    if ((regRole === 'MANAGEMENT' || regRole === 'POSTMAN') && !regPhoto) {
+      setRegMsg({ type: 'error', text: 'Profile picture is required for Management Staff and Field Collector accounts.' });
       return;
     }
 
@@ -213,7 +243,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
       last_name: regLastName.trim(),
       phone: regPhone.trim(),
       role: regRole,
-      employee_id: regEmpId.trim() || undefined
+      employee_id: regEmpId.trim() || undefined,
+      profile_photo: regPhoto || undefined
     });
 
     if (res.success) {
@@ -229,6 +260,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
       setRegEmail('');
       setRegPhone('');
       setRegEmpId('');
+      setRegPhoto('');
+      setRegPhotoPreview('');
     } else {
       setRegMsg({ type: 'error', text: res.error || 'Registration failed.' });
     }
@@ -345,41 +378,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
-                {/* Optional Demo Helpers for Testing Team */}
-                <div className="pt-4 border-t border-slate-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Testing Quick Fill
-                    </span>
-                    <span className="text-[10px] text-indigo-500">Click to fill</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleAutofillDemo('admin')}
-                      className="p-1.5 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 border border-slate-200 rounded-lg text-center transition cursor-pointer"
-                    >
-                      <div className="text-[11px] font-bold text-slate-800">Admin</div>
-                      <div className="text-[9px] text-slate-400">admin / admin123</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAutofillDemo('manager')}
-                      className="p-1.5 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 border border-slate-200 rounded-lg text-center transition cursor-pointer"
-                    >
-                      <div className="text-[11px] font-bold text-slate-800">Manager</div>
-                      <div className="text-[9px] text-slate-400">manager / admin123</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAutofillDemo('collector1')}
-                      className="p-1.5 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 border border-slate-200 rounded-lg text-center transition cursor-pointer"
-                    >
-                      <div className="text-[11px] font-bold text-slate-800">Postman</div>
-                      <div className="text-[9px] text-slate-400">collector1 / admin123</div>
-                    </button>
-                  </div>
-                </div>
               </form>
             </div>
           ) : (
@@ -523,6 +521,38 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
                   />
                 </div>
 
+                {/* Profile Picture Control (Required for Management & Postman) */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1 flex items-center justify-between">
+                    <span>Profile Picture {regRole !== 'ADMIN' && <strong className="text-rose-600">* (Required)</strong>}</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Max 5MB</span>
+                  </label>
+                  <div className="flex items-center space-x-3 p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                    {regPhotoPreview ? (
+                      <img
+                        src={regPhotoPreview}
+                        alt="Profile Preview"
+                        className="w-12 h-12 rounded-xl object-cover border border-indigo-300 shadow-xs shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-slate-200 border border-dashed border-slate-400 flex items-center justify-center text-slate-400 shrink-0">
+                        <Camera className="w-6 h-6" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="block w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1 truncate">
+                        {regPhoto ? 'Photo attached successfully' : 'Upload official staff badge/avatar'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <button
                   type="submit"
                   className="w-full mt-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition shadow-md shadow-indigo-100 cursor-pointer"
@@ -572,45 +602,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start space-x-2 text-rose-700 text-xs">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>{googleModalError}</span>
-                </div>
-              )}
-
-              {/* In Sign In mode: Show existing user accounts for instant 1-click select */}
-              {googleModalMode === 'signin' && (
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    Select an Account
-                  </label>
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                    {users.slice(0, 5).map((u) => (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => handleQuickSelectGoogleUser(u.email)}
-                        className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 flex items-center justify-between text-left transition group cursor-pointer"
-                      >
-                        <div className="flex items-center space-x-2.5 truncate">
-                          <div className="w-7 h-7 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                            {u.first_name ? u.first_name[0] : u.username[0].toUpperCase()}
-                          </div>
-                          <div className="truncate">
-                            <div className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 truncate">
-                              {u.first_name} {u.last_name}
-                            </div>
-                            <div className="text-[10px] text-slate-500 truncate">{u.email}</div>
-                          </div>
-                        </div>
-                        <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0">
-                          {u.role}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="relative flex items-center justify-center my-3">
-                    <div className="border-t border-slate-200 w-full"></div>
-                    <span className="bg-white px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 absolute">or enter Google email</span>
-                  </div>
                 </div>
               )}
 

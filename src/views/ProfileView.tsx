@@ -22,6 +22,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
   const [city, setCity] = useState(currentUser.city || '');
   const [state, setState] = useState(currentUser.state || '');
   const [pinCode, setPinCode] = useState(currentUser.pin_code || '');
+  const [profilePhoto, setProfilePhoto] = useState(currentUser.profile_photo || '');
+  const [photoError, setPhotoError] = useState('');
 
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -29,6 +31,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordMsg, setPasswordMsg] = useState<{ success: boolean; text: string } | null>(null);
   const [profileSaved, setProfileSaved] = useState(false);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhotoError('');
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Please select a valid image file (JPEG, PNG, WebP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError('Profile photo must be less than 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setProfilePhoto(result);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +65,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
       address,
       city,
       state,
-      pin_code: pinCode
+      pin_code: pinCode,
+      profile_photo: profilePhoto
     });
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 3000);
@@ -79,8 +105,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
 
       {/* User Card */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
-        <div className="w-20 h-20 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 font-black text-2xl shadow-inner">
-          {currentUser.first_name[0] || currentUser.username[0]?.toUpperCase()}
+        <div className="relative group shrink-0">
+          {profilePhoto ? (
+            <img
+              src={profilePhoto}
+              alt="Profile"
+              className="w-20 h-20 rounded-2xl object-cover border-2 border-indigo-200 shadow-sm"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 font-black text-2xl shadow-inner">
+              {currentUser.first_name[0] || currentUser.username[0]?.toUpperCase()}
+            </div>
+          )}
+          <label className="absolute -bottom-1 -right-1 w-7 h-7 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-md cursor-pointer transition">
+            <Camera className="w-3.5 h-3.5" />
+            <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+          </label>
         </div>
         <div className="text-center sm:text-left flex-1">
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
@@ -98,6 +138,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
           <p className="text-xs text-slate-400 mt-0.5">
             Employee ID: <span className="font-semibold text-slate-700">{currentUser.employee_id || 'N/A'}</span>
           </p>
+          {photoError && <p className="text-[11px] text-rose-600 mt-1">{photoError}</p>}
         </div>
       </div>
 

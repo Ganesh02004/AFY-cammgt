@@ -67,6 +67,22 @@ export const initialUsers: User[] = [
     created_at: "2026-10-04T12:00:00Z"
   },
   {
+    id: 5,
+    username: "mindra",
+    email: "mindra@afy-inventory.com",
+    first_name: "M",
+    last_name: "Indra",
+    role: "MANAGEMENT",
+    approval_status: "APPROVED",
+    phone: "+91 98450 12345",
+    address: "Whitefield Technology Park, Bengaluru",
+    work_location: "Bengaluru Tech Hub",
+    is_staff: true,
+    is_active: true,
+    profile_photo: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+    created_at: "2026-10-10T10:00:00Z"
+  },
+  {
     id: 7,
     username: "operations_lead",
     email: "operations.lead@afy-inventory.com",

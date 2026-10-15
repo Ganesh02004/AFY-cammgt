@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { UserRole } from '../../types';
+import { PurgeDataModal } from './PurgeDataModal';
 
 interface NavbarProps {
   currentView: string;
@@ -20,6 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenS
   const [operationsOpen, setOperationsOpen] = useState(false);
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isPurgeModalOpen, setIsPurgeModalOpen] = useState(false);
 
   const pendingApprovalsCount = users.filter(u => u.approval_status === 'PENDING').length;
 
@@ -417,15 +419,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenS
 
                           <button
                             onClick={() => {
-                              if (confirm("Reset demo database back to clean baseline state?")) {
-                                resetToSeedData();
-                                setUserMenuOpen(false);
-                              }
+                              setIsPurgeModalOpen(true);
+                              setUserMenuOpen(false);
                             }}
-                            className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center space-x-2"
+                            className="w-full text-left px-4 py-2 text-xs text-rose-600 font-bold hover:bg-rose-50 flex items-center space-x-2 cursor-pointer"
                           >
                             <RefreshCw className="w-4 h-4 text-rose-500" />
-                            <span>Purge / Reset Demo Data</span>
+                            <span>Purge / Reset System Data</span>
                           </button>
                         </>
                       )}
@@ -462,6 +462,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenS
           </div>
         </div>
       </div>
+
+      <PurgeDataModal isOpen={isPurgeModalOpen} onClose={() => setIsPurgeModalOpen(false)} />
     </nav>
   );
 };

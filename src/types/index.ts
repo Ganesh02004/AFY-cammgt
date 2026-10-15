@@ -20,6 +20,7 @@ export interface User {
   is_staff: boolean;
   is_active: boolean;
   profile_photo?: string;
+  password?: string;
   custom_fields?: Record<string, any>;
   created_at?: string;
 }
