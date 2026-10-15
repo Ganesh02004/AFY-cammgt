@@ -324,40 +324,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenS
                         <p className="text-[10px] text-indigo-600 font-semibold mt-0.5">{currentUser.work_location || 'Field Staff'}</p>
                       </div>
 
-                      {/* Instant Role Switcher for Testing */}
-                      <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                          <span>Quick Switch Demo Role</span>
-                          <span className="text-[9px] text-indigo-600">Click to switch</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-1 text-[11px]">
-                          <button
-                            onClick={() => handleRoleSwitch('admin')}
-                            className={`p-1 text-left rounded font-medium ${currentUser.username === 'admin' ? 'bg-purple-100 text-purple-900 font-bold' : 'hover:bg-slate-200 text-slate-700'}`}
-                          >
-                            👑 Admin
-                          </button>
-                          <button
-                            onClick={() => handleRoleSwitch('manager')}
-                            className={`p-1 text-left rounded font-medium ${currentUser.username === 'manager' ? 'bg-blue-100 text-blue-900 font-bold' : 'hover:bg-slate-200 text-slate-700'}`}
-                          >
-                            🛡️ Manager
-                          </button>
-                          <button
-                            onClick={() => handleRoleSwitch('collector1')}
-                            className={`p-1 text-left rounded font-medium ${currentUser.username === 'collector1' ? 'bg-emerald-100 text-emerald-900 font-bold' : 'hover:bg-slate-200 text-slate-700'}`}
-                          >
-                            📦 Collector 1
-                          </button>
-                          <button
-                            onClick={() => handleRoleSwitch('collector2')}
-                            className={`p-1 text-left rounded font-medium ${currentUser.username === 'collector2' ? 'bg-emerald-100 text-emerald-900 font-bold' : 'hover:bg-slate-200 text-slate-700'}`}
-                          >
-                            📦 Collector 2
-                          </button>
-                        </div>
-                      </div>
-
                       <button
                         onClick={() => { onNavigate('profile'); setUserMenuOpen(false); }}
                         className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center space-x-2"
@@ -384,6 +350,40 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenS
                       {currentUser.role === 'ADMIN' && (
                         <>
                           <div className="border-t border-slate-100 my-1"></div>
+                          {/* Admin Only Role Switcher */}
+                          <div className="px-4 py-2 bg-slate-50 border-y border-slate-100">
+                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                              <span>Admin Role Switcher</span>
+                              <span className="text-[9px] text-indigo-600">Dev Mode</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1 text-[11px]">
+                              <button
+                                onClick={() => handleRoleSwitch('admin')}
+                                className={`p-1 text-left rounded font-medium ${currentUser.username === 'admin' ? 'bg-purple-100 text-purple-900 font-bold' : 'hover:bg-slate-200 text-slate-700'}`}
+                              >
+                                👑 Admin
+                              </button>
+                              <button
+                                onClick={() => handleRoleSwitch('manager')}
+                                className={`p-1 text-left rounded font-medium ${currentUser.username === 'manager' ? 'bg-blue-100 text-blue-900 font-bold' : 'hover:bg-slate-200 text-slate-700'}`}
+                              >
+                                🛡️ Manager
+                              </button>
+                              <button
+                                onClick={() => handleRoleSwitch('collector1')}
+                                className={`p-1 text-left rounded font-medium ${currentUser.username === 'collector1' ? 'bg-emerald-100 text-emerald-900 font-bold' : 'hover:bg-slate-200 text-slate-700'}`}
+                              >
+                                📦 Collector 1
+                              </button>
+                              <button
+                                onClick={() => handleRoleSwitch('collector2')}
+                                className={`p-1 text-left rounded font-medium ${currentUser.username === 'collector2' ? 'bg-emerald-100 text-emerald-900 font-bold' : 'hover:bg-slate-200 text-slate-700'}`}
+                              >
+                                📦 Collector 2
+                              </button>
+                            </div>
+                          </div>
+
                           <button
                             onClick={() => { onNavigate('studio'); setUserMenuOpen(false); }}
                             className="w-full text-left px-4 py-2 text-xs text-purple-700 font-bold hover:bg-purple-50 flex items-center space-x-2"
@@ -414,23 +414,23 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenS
                             <ShieldAlert className="w-4 h-4 text-slate-400" />
                             <span>System Audit Logs</span>
                           </button>
+
+                          <button
+                            onClick={() => {
+                              if (confirm("Reset demo database back to clean baseline state?")) {
+                                resetToSeedData();
+                                setUserMenuOpen(false);
+                              }
+                            }}
+                            className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center space-x-2"
+                          >
+                            <RefreshCw className="w-4 h-4 text-rose-500" />
+                            <span>Purge / Reset Demo Data</span>
+                          </button>
                         </>
                       )}
 
                       <div className="border-t border-slate-100 my-1"></div>
-
-                      <button
-                        onClick={() => {
-                          if (confirm("Reset demo database back to clean baseline state?")) {
-                            resetToSeedData();
-                            setUserMenuOpen(false);
-                          }
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center space-x-2"
-                      >
-                        <RefreshCw className="w-4 h-4 text-rose-500" />
-                        <span>Purge / Reset Demo Data</span>
-                      </button>
 
                       <button
                         onClick={() => { logout(); setUserMenuOpen(false); onNavigate('login'); }}

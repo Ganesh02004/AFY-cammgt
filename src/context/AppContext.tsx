@@ -54,10 +54,10 @@ interface AppContextType {
   dynamicRecords: DynamicRecord[];
 
   // Auth & Security
-  login: (username: string, password?: string) => { success: boolean; error?: string };
-  loginWithGoogle: (payload: GoogleAuthPayload | string) => { success: boolean; user?: User; error?: string };
+  login: (username: string, password?: string) => { success: boolean; error?: string; pending_approval?: boolean };
+  loginWithGoogle: (payload: GoogleAuthPayload | string) => { success: boolean; user?: User; error?: string; pending_approval?: boolean; message?: string };
   logout: () => void;
-  registerUser: (userData: Partial<User>) => { success: boolean; error?: string };
+  registerUser: (userData: Partial<User>) => { success: boolean; error?: string; pending_approval?: boolean; message?: string };
   updateUserProfile: (userId: number, updates: Partial<User>) => void;
   isSessionLocked: boolean;
   unlockSession: () => void;
@@ -663,6 +663,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, error: "Your account has been deactivated or rejected by an Administrator." };
     }
 
+    if (user.approval_status === 'PENDING') {
+      return { 
+        success: false, 
+        pending_approval: true,
+        error: "Your account registration is pending Administrator approval. You will be able to log in as soon as an Admin approves your account." 
+      };
+    }
+
     setCurrentUser(user);
     addAuditLog("LOGIN", "User", String(user.id), `User ${user.username} logged in successfully (${user.role})`);
     return { success: true };
@@ -689,13 +697,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (existing.approval_status === 'DEACTIVATED' || existing.approval_status === 'REJECTED' || !existing.is_active) {
         return { success: false, error: "Your Google-linked account has been deactivated or rejected by an Administrator." };
       }
+      if (existing.approval_status === 'PENDING') {
+        return { 
+          success: false, 
+          pending_approval: true,
+          error: "Your Google account is registered, but pending Administrator approval. Please wait for an Admin to review and activate your access." 
+        };
+      }
       setCurrentUser(existing);
       addAuditLog("LOGIN_GOOGLE", "User", String(existing.id), `User ${existing.username} authenticated via Google Single Sign-On (${existing.email})`);
       return { success: true, user: existing };
     } else {
-      // Create new user linked with Google identity
+      // Create new user linked with Google identity in PENDING status
       const newSeq = getNextSequenceId('USR');
-      const roleToSet: UserRole = payloadObj.requestedRole || 'MANAGEMENT';
+      const roleToSet: UserRole = payloadObj.requestedRole || 'POSTMAN';
       const nameStr = payloadObj.name?.trim() || emailStr.split('@')[0];
       const nameParts = nameStr.split(' ');
       const firstName = nameParts[0] || 'Google';
@@ -717,7 +732,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         first_name: firstName,
         last_name: lastName,
         role: roleToSet,
-        approval_status: 'APPROVED',
+        approval_status: 'PENDING', // PENDING APPROVAL - NEVER DIRECTLY APPROVED
         phone: payloadObj.phone || '+91 98000 00000',
         employee_id: payloadObj.employeeId || `EMP-${Math.floor(100 + Math.random() * 900)}`,
         address: 'Field Operations Depot',
@@ -729,9 +744,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
 
       setUsers(prev => [...prev, newUser]);
-      setCurrentUser(newUser);
-      addAuditLog("REGISTER_GOOGLE", "User", String(newUser.id), `New account registered via Google OAuth (${newUser.email}, Role: ${roleToSet})`);
-      return { success: true, user: newUser };
+      // NOTE: Do NOT call setCurrentUser(newUser)! New users are not logged in until approved!
+      addAuditLog("REGISTER_GOOGLE", "User", String(newUser.id), `New account self-registered via Google OAuth [${newSeq}] (Pending Approval): ${newUser.email}, Role: ${roleToSet}`);
+
+      // Notify Admins
+      const adminList = users.filter(u => u.role === 'ADMIN');
+      adminList.forEach(adm => {
+        createNotificationInternal({
+          user_id: adm.id,
+          title: "New Google Registration Pending",
+          message: `${newUser.first_name} ${newUser.last_name} (${newUser.email}) registered as ${newUser.role} [${newSeq}] and is awaiting review.`,
+          category: "APPROVAL",
+          is_read: false,
+          related_record_type: "user",
+          related_record_id: newUser.id,
+          action_view: "users"
+        });
+      });
+
+      return { 
+        success: true, 
+        pending_approval: true,
+        message: `Google account verified (${emailStr})! Your registration has been submitted and is currently pending Administrator approval.` 
+      };
     }
   };
 
@@ -779,7 +814,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     });
 
-    return { success: true };
+    return { 
+      success: true, 
+      pending_approval: true,
+      message: "Staff registration submitted! Your account is pending Administrator review and approval." 
+    };
   };
 
   const updateUserProfile = (userId: number, updates: Partial<User>) => {
