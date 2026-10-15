@@ -117,11 +117,11 @@ def verify_firebase_id_token(id_token):
     if not id_token:
         return None
 
-    # 1. Try Firebase Admin SDK if service account is active
+    # 1. Try Firebase Admin SDK if active
     if FIREBASE_AVAILABLE:
         try:
             app = _init_firebase_admin()
-            if _rtdb_initialized:
+            if app:
                 decoded_token = fb_auth.verify_id_token(id_token)
                 return {
                     'uid': decoded_token.get('uid'),
@@ -193,6 +193,63 @@ def verify_firebase_id_token(id_token):
         logger.error(f"JWT claims decode fallback error: {decode_err}")
 
     return None
+
+
+def create_or_sync_firebase_user(email, password=None, display_name=None):
+    """
+    Creates or synchronizes a user in Firebase Authentication.
+    Uses Firebase Admin SDK when available or Google Identity Toolkit REST API.
+    Returns (uid, created_or_updated: bool) or (None, False).
+    """
+    if not email:
+        return None, False
+
+    # 1. Try Firebase Admin SDK
+    if FIREBASE_AVAILABLE:
+        try:
+            app = _init_firebase_admin()
+            if app:
+                try:
+                    user_record = fb_auth.get_user_by_email(email)
+                    return user_record.uid, False
+                except fb_auth.UserNotFoundError:
+                    kwargs = {'email': email}
+                    if password:
+                        kwargs['password'] = password
+                    if display_name:
+                        kwargs['display_name'] = display_name
+                    user_record = fb_auth.create_user(**kwargs)
+                    logger.info(f"Created Firebase Auth user via Admin SDK: {user_record.uid} ({email})")
+                    return user_record.uid, True
+        except Exception as e:
+            logger.debug(f"Firebase Admin SDK create_user note: {e}")
+
+    # 2. Try Google Identity Toolkit REST API (accounts:signUp)
+    api_key = getattr(settings, 'FIREBASE_WEB_CONFIG', {}).get('apiKey', '')
+    if api_key and password:
+        try:
+            url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={api_key}"
+            payload = {
+                'email': email,
+                'password': password,
+                'returnSecureToken': True
+            }
+            if display_name:
+                payload['displayName'] = display_name
+            resp = requests.post(url, json=payload, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                uid = data.get('localId')
+                logger.info(f"Created Firebase Auth user via REST API: {uid} ({email})")
+                return uid, True
+            elif resp.status_code == 400:
+                err_data = resp.json()
+                msg = err_data.get('error', {}).get('message', '')
+                logger.debug(f"Identity Toolkit note: {msg}")
+        except Exception as e:
+            logger.debug(f"Identity Toolkit signUp REST error: {e}")
+
+    return None, False
 
 
 # =====================================================================

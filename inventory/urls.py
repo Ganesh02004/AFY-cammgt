@@ -14,6 +14,7 @@ urlpatterns = [
     path('api/auth/google-quick/', views.google_quick_login_api, name='google_quick_login_api'),
     path('api/auth/keep-alive/', views.session_keepalive_api, name='session_keepalive'),
     path('', views.dashboard_view, name='dashboard'),
+    path('dashboard/', views.dashboard_view, name='dashboard_alias'),
 
     # Inventories
     path('my-inventory/', views.my_inventory_view, name='my_inventory'),

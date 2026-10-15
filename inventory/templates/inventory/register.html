@@ -20,35 +20,19 @@
 
         <div class="p-8 space-y-6">
 
-            <!-- Dynamic Notification / Status Alert Container (Inline, non-blocking) -->
+            <!-- Dynamic Notification / Status Alert Container -->
             <div id="register-status-container" class="hidden p-3.5 rounded-2xl text-xs transition-all duration-200"></div>
 
-            <!-- Firebase Google Quick Sign-Up & GIS -->
-            <div class="space-y-2.5">
-                <!-- Recommended: Instant One-Click Google Access -->
-                <button type="button" onclick="quickRegisterGoogle('ganeshpurma5@gmail.com')" class="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-2 shadow-sm shadow-emerald-200 cursor-pointer">
-                    <i class="fa-solid fa-bolt text-amber-300 text-xs"></i>
-                    <span>⚡ Instant Google Access (ganeshpurma5@gmail.com)</span>
-                </button>
-
-                <!-- Native Google Identity Services Button Container -->
-                <div id="g_id_register_container" class="flex justify-center w-full overflow-hidden rounded-2xl min-h-[44px]"></div>
-
-                <!-- Firebase Direct Button -->
-                <button type="button" onclick="startGoogleSignUp(false)" id="btn-google-signup" class="w-full py-2.5 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-2 shadow-xs cursor-pointer">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24">
+            <!-- Google Authentication Option -->
+            <div>
+                <button type="button" onclick="startGoogleSignUp()" id="btn-google-signup" class="w-full py-3 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-2xl text-xs transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer">
+                    <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                     </svg>
-                    <span>Register with Google (Firebase)</span>
-                </button>
-
-                <!-- Full Page Redirect Button -->
-                <button type="button" onclick="startGoogleSignUp(true)" class="w-full py-1.5 px-3 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 text-[11px] font-semibold rounded-xl transition flex items-center justify-center space-x-1.5 border border-slate-200 cursor-pointer">
-                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                    <span>Full-Page Google Redirect</span>
+                    <span>Register with Google</span>
                 </button>
             </div>
 
@@ -72,7 +56,7 @@
             {% endif %}
 
             <!-- Registration Form -->
-            <form method="post" id="registration-form" onsubmit="return handleEmailPasswordRegister(event);" class="space-y-4 text-xs">
+            <form method="post" id="registration-form" action="{% url 'register' %}" onsubmit="return validateRegistrationForm();" class="space-y-4 text-xs">
                 {% csrf_token %}
 
                 <!-- Name Fields -->
@@ -106,10 +90,10 @@
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">+91</span>
                         <input type="tel" name="phone" id="id_phone" required pattern="[6-9][0-9]{9}" maxlength="10" placeholder="e.g. 9876543210" value="{{ form.phone.value|default:'' }}" class="form-input pl-11 font-mono text-xs">
                     </div>
-                    <span class="text-[10px] text-slate-400 mt-0.5 block">10 digits starting with 6, 7, 8, or 9 (no +91 or 0 prefix needed)</span>
+                    <span class="text-[10px] text-slate-400 mt-0.5 block">10 digits starting with 6, 7, 8, or 9 (no +91 prefix needed)</span>
                 </div>
 
-                <!-- 2 Option Role Selection -->
+                <!-- Operational Role Selection -->
                 <div>
                     <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Operational Role Requested *</label>
                     {{ form.role }}
@@ -143,137 +127,27 @@
                         <i class="fa-solid fa-shield-halved text-amber-600 mr-1.5"></i> Custody Security Protocol
                     </p>
                     <p class="text-amber-800">
-                        After submitting this form, your account will be set to <strong>Inactive</strong>. You will be able to log in immediately after a system administrator reviews and activates your account.
+                        After registering, your account will undergo administrator verification. You will be activated once your profile has been approved.
                     </p>
                 </div>
 
-                <button type="submit" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-indigo-100 flex items-center justify-center space-x-2">
+                <button type="submit" id="btn-submit-reg" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-indigo-100 flex items-center justify-center space-x-2 cursor-pointer">
                     <i class="fa-solid fa-user-check"></i>
                     <span>Submit Registration for Admin Approval</span>
                 </button>
             </form>
 
-            <div class="pt-2 text-center text-xs text-slate-500">
-                Already have an approved account?
-                <a href="{% url 'login' %}" class="font-bold text-indigo-600 hover:text-indigo-800 ml-1">Sign In</a>
+            <!-- Login Link -->
+            <div class="pt-4 text-center text-xs text-slate-500 border-t border-slate-100">
+                Already registered?
+                <a href="{% url 'login' %}" class="font-bold text-indigo-600 hover:text-indigo-800 ml-1">Sign In to Account &rarr;</a>
             </div>
 
-        </div>
-
-    </div>
-</div>
-
-<!-- Modal for Google Sign-Up Role & Phone Selection -->
-<div id="google-profile-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 border border-slate-200 text-xs">
-        <div class="text-center space-y-1 border-b border-slate-100 pb-3">
-            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto text-xl">
-                <i class="fa-brands fa-google"></i>
-            </div>
-            <h2 class="text-base font-extrabold text-slate-900 mt-2">Complete Google Registration</h2>
-            <p id="google-user-greeting" class="text-xs text-slate-500">Select your role and phone to request access</p>
-        </div>
-
-        <div class="space-y-4">
-            <div>
-                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Select Your Role *</label>
-                <select id="google-role-select" class="form-select text-xs">
-                    <option value="POSTMAN">Postman / Field Collector (Pickups & Returns)</option>
-                    <option value="MANAGEMENT">Management User (Inventory Oversight & Audits)</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Mobile Number (Indian 10-Digit) *</label>
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">+91</span>
-                    <input type="tel" id="google-phone-input" required pattern="[6-9][0-9]{9}" maxlength="10" placeholder="e.g. 9876543210" class="form-input pl-11 font-mono text-xs">
-                </div>
-            </div>
-
-            <div id="google-modal-status" class="hidden text-[11px] p-2.5 rounded-xl"></div>
-
-            <div class="flex items-center justify-end space-x-2 pt-2">
-                <button type="button" onclick="closeGoogleModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 font-bold hover:bg-slate-50">Cancel</button>
-                <button type="button" onclick="submitGoogleRegistration()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center space-x-1.5 shadow-sm">
-                    <i class="fa-solid fa-check"></i>
-                    <span>Submit for Approval</span>
-                </button>
-            </div>
         </div>
     </div>
 </div>
 
 <script>
-    let pendingGoogleIdToken = null;
-
-    function handleEmailPasswordRegister(event) {
-        if (typeof firebase === 'undefined' || !firebase.auth) {
-            return true;
-        }
-
-        const emailEl = document.getElementById('id_email');
-        const passEl = document.getElementById('id_password');
-        const confirmEl = document.getElementById('id_confirm_password');
-
-        const email = emailEl ? emailEl.value.trim() : '';
-        const password = passEl ? passEl.value : '';
-        const confirmPassword = confirmEl ? confirmEl.value : '';
-
-        if (!email || !password) {
-            return true;
-        }
-
-        if (password !== confirmPassword) {
-            showRegisterStatus("<i class='fa-solid fa-triangle-exclamation mr-1'></i> Passwords do not match. Please verify your entries.", "error");
-            return false;
-        }
-
-        event.preventDefault();
-        const form = document.getElementById('registration-form');
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Registering in Firebase Authentication...';
-        }
-
-        // Create user directly in Firebase Authentication
-        firebase.auth().createUserWithEmailAndPassword(email, password)
-            .then(userCred => {
-                userCred.user.sendEmailVerification().catch(e => console.log("Email verification link notice:", e));
-                return userCred.user.getIdToken();
-            })
-            .then(idToken => {
-                let tokenInput = document.getElementById('id_firebase_token');
-                if (!tokenInput) {
-                    tokenInput = document.createElement('input');
-                    tokenInput.type = 'hidden';
-                    tokenInput.id = 'id_firebase_token';
-                    tokenInput.name = 'firebase_token';
-                    form.appendChild(tokenInput);
-                }
-                tokenInput.value = idToken;
-                form.submit();
-            })
-            .catch(err => {
-                console.error("Firebase Auth Registration:", err);
-                if (err.code === 'auth/email-already-in-use') {
-                    showRegisterStatus("<i class='fa-solid fa-triangle-exclamation mr-1'></i> This email address is already registered in Firebase Authentication. Please <a href='/login/' class='font-bold underline'>sign in instead</a>.", "warning");
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<i class="fa-solid fa-user-check mr-1"></i> Submit Registration for Admin Approval';
-                    }
-                } else if (err.code === 'auth/operation-not-allowed') {
-                    console.warn("Email/Password provider disabled in Firebase Console, continuing with local signup.");
-                    form.submit();
-                } else {
-                    console.warn("Firebase client registration notice:", err.message);
-                    form.submit();
-                }
-            });
-        return false;
-    }
-
     // Helper: Show non-blocking inline status in register page
     function showRegisterStatus(htmlMessage, type = 'info') {
         const container = document.getElementById('register-status-container');
@@ -290,195 +164,91 @@
         container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    // Initialize Google Identity Services for registration
-    function initGoogleIdentityRegister() {
-        if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-            try {
-                google.accounts.id.initialize({
-                    client_id: typeof GOOGLE_CLIENT_ID !== 'undefined' ? GOOGLE_CLIENT_ID : "320438154890-vdjjbnhs5le0ufbh10r011s34mv9a8br.apps.googleusercontent.com",
-                    callback: handleGoogleRegisterCredential,
-                    auto_select: false,
-                    cancel_on_tap_outside: true
-                });
-                const container = document.getElementById("g_id_register_container");
-                if (container) {
-                    google.accounts.id.renderButton(container, {
-                        type: 'standard',
-                        theme: 'outline',
-                        size: 'large',
-                        text: 'signup_with',
-                        shape: 'pill',
-                        logo_alignment: 'left',
-                        width: Math.min(container.offsetWidth || 340, 360)
-                    });
-                }
-            } catch(e) {
-                console.log("GIS register init notice:", e);
-            }
+    // Client-side password match validation before submission
+    function validateRegistrationForm() {
+        const passEl = document.getElementById('id_password');
+        const confirmEl = document.getElementById('id_confirm_password');
+        if (passEl && confirmEl && passEl.value !== confirmEl.value) {
+            showRegisterStatus("<i class='fa-solid fa-triangle-exclamation mr-1'></i> Passwords do not match. Please verify your entries.", "error");
+            return false;
         }
-    }
 
-    function handleGoogleRegisterCredential(response) {
-        if (response && response.credential) {
-            showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Google Identity verified. Establishing session...', 'info');
-            processTokenOnBackend(response.credential);
+        const submitBtn = document.getElementById('btn-submit-reg');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Submitting registration...';
         }
+        return true;
     }
 
-    // Instant Google registration / bypass
-    function quickRegisterGoogle(email = 'ganeshpurma5@gmail.com') {
-        showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-emerald-600"></i> Signing in directly as ' + email + '...', 'info');
-        fetch("{% url 'google_quick_login_api' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ email: email })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                window.location.href = data.redirectUrl || '/dashboard/';
-            } else {
-                showRegisterStatus(data.error || 'Quick Google registration failed.', 'error');
-            }
-        })
-        .catch(() => {
-            window.location.href = "{% url 'google_quick_login_api' %}?email=" + encodeURIComponent(email);
-        });
-    }
-
-    function startGoogleSignUp(useRedirect = false) {
+    // Google Sign-Up via Firebase Popup
+    function startGoogleSignUp() {
         if (typeof firebase === 'undefined' || !firebase.auth) {
-            showRegisterStatus("<i class='fa-solid fa-circle-notch fa-spin mr-1'></i> Authentication library is initializing. Please wait a moment or click <strong>⚡ Instant Google Access</strong> above.", "warning");
+            showRegisterStatus("<i class='fa-solid fa-circle-notch fa-spin mr-1'></i> Authentication service is initializing. Please try again in a moment.", "warning");
             return;
         }
+
+        const btn = document.getElementById('btn-google-signup');
+        if (btn) btn.disabled = true;
+        showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Connecting to Google Authentication...', 'info');
 
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
 
-        if (useRedirect) {
-            sessionStorage.setItem('afy_auth_redirect_pending', '1');
-            showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Redirecting to Google Authentication...', 'info');
-            firebase.auth().signInWithRedirect(provider);
-            return;
-        }
-
-        showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Opening Google Sign-In popup...', 'info');
-
         firebase.auth().signInWithPopup(provider)
-            .then(result => processGoogleUser(result.user))
+            .then(result => {
+                if (btn) btn.disabled = false;
+                processGoogleUser(result.user);
+            })
             .catch(err => {
+                if (btn) btn.disabled = false;
                 console.error("Google Auth error:", err);
                 if (err.code === 'auth/unauthorized-domain') {
                     showRegisterStatus(
-                        '<strong><i class="fa-solid fa-triangle-exclamation mr-1 text-rose-600"></i> Domain Notice (' + window.location.hostname + '):</strong><br>' +
-                        'Firebase requires domain authorization for popup auth. Click below for instant verified access:<br>' +
-                        '<div class="mt-2">' +
-                        '<button type="button" onclick="quickRegisterGoogle(\'ganeshpurma5@gmail.com\')" class="py-2 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center space-x-1.5 shadow-sm cursor-pointer">' +
-                        '<i class="fa-solid fa-bolt text-amber-300"></i><span>⚡ Instant Google Sign-In as ganeshpurma5@gmail.com</span>' +
-                        '</button>' +
-                        '</div>',
+                        '<strong><i class="fa-solid fa-shield-halved mr-1 text-rose-600"></i> Domain Not Authorized in Firebase:</strong><br>' +
+                        'The domain <code>' + window.location.hostname + '</code> is not in Firebase Console Authorized Domains.<br>' +
+                        '<span class="text-[11px] text-slate-700 mt-1.5 block">You can register immediately using the Staff Registration Form below.</span>',
                         'warning'
                     );
                 } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
                     showRegisterStatus(
-                        '<strong><i class="fa-solid fa-shield-halved mr-1 text-amber-600"></i> Browser Cross-Origin Storage Policy:</strong><br>' +
-                        'Modern browsers (Chrome/Brave/Edge) block third-party cookies on localhost when communicating with Firebase.<br>' +
-                        '<div class="mt-2.5 flex flex-col sm:flex-row gap-2">' +
-                        '<button type="button" onclick="quickRegisterGoogle(\'ganeshpurma5@gmail.com\')" class="py-2 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center space-x-1.5 shadow-sm cursor-pointer">' +
-                        '<i class="fa-solid fa-bolt text-amber-300"></i><span>⚡ Instant Google Access (ganeshpurma5@gmail.com)</span>' +
-                        '</button>' +
-                        '<button type="button" onclick="startGoogleSignUp(true)" class="py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer">' +
-                        '<i class="fa-solid fa-arrow-up-right-from-square text-xs"></i><span>Try Full-Page Redirect</span>' +
-                        '</button>' +
-                        '</div>',
-                        'warning'
+                        '<i class="fa-solid fa-circle-info mr-1 text-slate-600"></i> Google registration window closed. Try again or complete the form below.',
+                        'info'
                     );
                 } else {
                     showRegisterStatus(
-                        'Google Sign-In notice (' + err.code + '): ' + (err.message || 'Unable to connect to Google.') + '<br>' +
-                        '<button type="button" onclick="quickRegisterGoogle(\'ganeshpurma5@gmail.com\')" class="mt-2 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center space-x-1 shadow-sm">' +
-                        '<i class="fa-solid fa-bolt text-amber-300"></i><span>Use Instant Google Access</span></button>',
+                        'Google Sign-In notice (' + err.code + '). You can register using the Staff Form below.',
                         'error'
                     );
                 }
             });
     }
 
-    function processTokenOnBackend(idToken) {
-        showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Verifying token with server...', 'info');
-        return fetch("{% url 'firebase_login_api' %}", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken: idToken })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.needs_profile_completion) {
-                window.location.href = data.redirectUrl || '/complete-profile/';
-            } else if (data.pending_approval) {
-                window.location.href = data.redirectUrl || '/pending-approval/';
-            } else if (data.success) {
-                window.location.href = data.redirectUrl || '/dashboard/';
-            } else {
-                showRegisterStatus(data.error || "Authentication could not be completed.", "error");
-            }
-        })
-        .catch(err => {
-            console.error("Token verification error:", err);
-            showRegisterStatus("Network or server error during token verification. Try Instant Google Access above.", "error");
-        });
-    }
-
     function processGoogleUser(firebaseUser) {
-        showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Authenticated (' + firebaseUser.email + '). Verifying backend session...', 'info');
-        firebaseUser.getIdToken().then(idToken => processTokenOnBackend(idToken));
-    }
-
-    // Check for redirect return & initialize GIS
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(initGoogleIdentityRegister, 300);
-
-        if (typeof firebase !== 'undefined' && firebase.auth) {
-            const wasRedirectPending = sessionStorage.getItem('afy_auth_redirect_pending');
-            if (wasRedirectPending) {
-                showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Checking Google redirect sign-in response...', 'info');
-            }
-
-            firebase.auth().getRedirectResult()
-                .then(result => {
-                    sessionStorage.removeItem('afy_auth_redirect_pending');
-                    if (result && result.user) {
-                        processGoogleUser(result.user);
-                    } else if (wasRedirectPending) {
-                        showRegisterStatus(
-                            '<strong><i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> Redirect storage blocked by browser:</strong><br>' +
-                            'Third-party storage partition prevented redirect token capture on localhost.<br>' +
-                            '<button type="button" onclick="quickRegisterGoogle(\'ganeshpurma5@gmail.com\')" class="mt-2 py-2 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center space-x-1.5 shadow-sm cursor-pointer">' +
-                            '<i class="fa-solid fa-bolt text-amber-300 text-xs"></i><span>⚡ Click for Instant Access as ganeshpurma5@gmail.com</span>' +
-                            '</button>',
-                            'warning'
-                        );
-                    }
-                })
-                .catch(err => {
-                    sessionStorage.removeItem('afy_auth_redirect_pending');
-                    console.log("Redirect result note:", err);
-                    showRegisterStatus(
-                        'Redirect sign-in notice: ' + (err.message || err.code) + '<br>' +
-                        '<button type="button" onclick="quickRegisterGoogle(\'ganeshpurma5@gmail.com\')" class="mt-2 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center space-x-1">' +
-                        '<i class="fa-solid fa-bolt text-amber-300"></i><span>Use Instant Access</span></button>',
-                        'warning'
-                    );
-                });
-        }
-    });
-
-    function closeGoogleModal() {
-        const modal = document.getElementById('google-profile-modal');
-        if (modal) modal.classList.add('hidden');
+        showRegisterStatus('<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-600"></i> Verified with Google (' + firebaseUser.email + '). Setting up staff account...', 'info');
+        firebaseUser.getIdToken().then(idToken => {
+            fetch("{% url 'firebase_login_api' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken: idToken })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.needs_profile_completion) {
+                    window.location.href = data.redirectUrl || '/complete-profile/';
+                } else if (data.pending_approval) {
+                    window.location.href = data.redirectUrl || '/pending-approval/';
+                } else if (data.success) {
+                    window.location.href = data.redirectUrl || '/dashboard/';
+                } else {
+                    showRegisterStatus(data.error || "Authentication could not be completed.", "error");
+                }
+            })
+            .catch(err => {
+                console.error("Token verification error:", err);
+                showRegisterStatus("Network communication error. Please use the Staff Registration Form below.", "error");
+            });
+        });
     }
 </script>
 {% endblock %}

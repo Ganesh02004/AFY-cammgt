@@ -44,8 +44,8 @@ from .services import (
     pair_remote_scanner, record_remote_scan_result
 )
 from .firebase_service import (
-    verify_firebase_id_token, delete_device_from_rtdb,
-    sync_client_to_rtdb, sync_contact_to_rtdb, sync_worker_to_rtdb
+    verify_firebase_id_token, create_or_sync_firebase_user,
+    delete_device_from_rtdb, sync_client_to_rtdb, sync_contact_to_rtdb, sync_worker_to_rtdb
 )
 from .decorators import admin_required, management_or_admin_required
 
@@ -135,6 +135,19 @@ def register_view(request):
                 if decoded and decoded.get('uid'):
                     new_user.firebase_uid = decoded.get('uid')
                     new_user.email_verified = decoded.get('email_verified', False)
+
+            # Ensure user is registered/synced with Firebase Authentication
+            if not new_user.firebase_uid and new_user.email:
+                raw_password = form.cleaned_data.get('password')
+                full_name = f"{new_user.first_name} {new_user.last_name}".strip()
+                fb_uid, _ = create_or_sync_firebase_user(
+                    email=new_user.email,
+                    password=raw_password,
+                    display_name=full_name or new_user.username
+                )
+                if fb_uid:
+                    new_user.firebase_uid = fb_uid
+
             new_user.save()
             record_audit_log(new_user, "USER_REGISTERED", "User", new_user.id, f"Self-registered user pending approval ({new_user.username}, Role: {new_user.role})", get_client_ip(request))
             login(request, new_user)
