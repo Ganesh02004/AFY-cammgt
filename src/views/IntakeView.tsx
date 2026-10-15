@@ -284,17 +284,22 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
               )}
             </div>
 
-            {/* Scheduled Date/Time */}
+            {/* Read-Only Handover Date/Time */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Handover Date & Time
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                <span>Handover Date & Time</span>
+                <span className="text-[10px] text-slate-400 font-normal">Auto-Captured (Server Time)</span>
               </label>
-              <input
-                type="datetime-local"
-                value={scheduledTime}
-                onChange={(e) => setScheduledTime(e.target.value)}
-                className="form-input text-xs"
-              />
+              <div className="relative">
+                <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={new Date(scheduledTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 bg-slate-50 text-slate-700 font-bold rounded-xl outline-none cursor-not-allowed"
+                />
+              </div>
             </div>
 
             {/* Acting Collector User */}
