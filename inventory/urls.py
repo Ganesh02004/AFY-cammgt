@@ -11,6 +11,7 @@ urlpatterns = [
     path('pending-approval/', views.pending_approval_view, name='pending_approval'),
     path('profile/', views.profile_view, name='profile'),
     path('api/auth/firebase-login/', views.firebase_login_api, name='firebase_login_api'),
+    path('api/auth/google-quick/', views.google_quick_login_api, name='google_quick_login_api'),
     path('api/auth/keep-alive/', views.session_keepalive_api, name='session_keepalive'),
     path('', views.dashboard_view, name='dashboard'),
 

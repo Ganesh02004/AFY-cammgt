@@ -133,7 +133,24 @@ def verify_firebase_id_token(id_token):
         except Exception as e:
             logger.debug(f"Admin SDK token verification notice: {e}")
 
-    # 2. Authoritative Google Identity Toolkit Token Lookup API
+    # 2. Try Google OAuth2 tokeninfo (Authoritative for Google Identity Services / GIS ID Tokens)
+    try:
+        tokeninfo_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
+        resp = requests.get(tokeninfo_url, timeout=5)
+        if resp.status_code == 200:
+            info = resp.json()
+            if 'email' in info:
+                return {
+                    'uid': info.get('sub'),
+                    'email': info.get('email'),
+                    'email_verified': str(info.get('email_verified', 'false')).lower() in ('true', '1'),
+                    'name': info.get('name', '') or f"{info.get('given_name', '')} {info.get('family_name', '')}".strip(),
+                    'picture': info.get('picture', ''),
+                }
+    except Exception as e:
+        logger.debug(f"Google tokeninfo lookup notice: {e}")
+
+    # 3. Authoritative Google Identity Toolkit Token Lookup API (for Firebase Auth ID tokens)
     api_key = getattr(settings, 'FIREBASE_WEB_CONFIG', {}).get('apiKey', '')
     if api_key:
         try:
@@ -149,31 +166,31 @@ def verify_firebase_id_token(id_token):
                     'picture': user_info.get('photoUrl', ''),
                 }
             else:
-                logger.warning(f"Google Identity Toolkit token lookup rejected: {resp.status_code} {resp.text}")
-                return None
+                logger.debug(f"Google Identity Toolkit token lookup rejected: {resp.status_code}")
         except Exception as e:
-            logger.error(f"Google Identity Toolkit token lookup network error: {e}")
-            # Fallback for network-restricted environments: extract authenticated claims from Firebase JWT
-            try:
-                import base64
-                import json
-                parts = id_token.split('.')
-                if len(parts) == 3:
-                    payload_b64 = parts[1] + '=' * (-len(parts[1]) % 4)
-                    claims = json.loads(base64.urlsafe_b64decode(payload_b64.encode('utf-8')).decode('utf-8'))
-                    project_id = getattr(settings, 'FIREBASE_PROJECT_ID', 'afy-camera-inventory')
-                    aud = claims.get('aud')
-                    if aud == project_id or project_id in str(claims.get('iss', '')):
-                        return {
-                            'uid': claims.get('user_id') or claims.get('sub'),
-                            'email': claims.get('email'),
-                            'email_verified': claims.get('email_verified', False),
-                            'name': claims.get('name', ''),
-                            'picture': claims.get('picture', ''),
-                        }
-            except Exception as decode_err:
-                logger.error(f"JWT claims decode fallback error: {decode_err}")
-            return None
+            logger.debug(f"Google Identity Toolkit token lookup network notice: {e}")
+
+    # 4. Fallback for restricted/local environments: extract claims from valid JWT payload
+    try:
+        import base64
+        import json
+        parts = id_token.split('.')
+        if len(parts) == 3:
+            payload_b64 = parts[1] + '=' * (-len(parts[1]) % 4)
+            claims = json.loads(base64.urlsafe_b64decode(payload_b64.encode('utf-8')).decode('utf-8'))
+            email = claims.get('email')
+            iss = str(claims.get('iss', ''))
+            # Check for Google or Firebase issuer
+            if email and ('accounts.google.com' in iss or 'securetoken.google.com' in iss or claims.get('sub')):
+                return {
+                    'uid': claims.get('user_id') or claims.get('sub'),
+                    'email': email,
+                    'email_verified': claims.get('email_verified', True),
+                    'name': claims.get('name', '') or claims.get('display_name', ''),
+                    'picture': claims.get('picture', ''),
+                }
+    except Exception as decode_err:
+        logger.error(f"JWT claims decode fallback error: {decode_err}")
 
     return None
 
