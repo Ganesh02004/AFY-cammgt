@@ -15,7 +15,7 @@ import {
   initialClientOffices, initialNotifications, initialAnnouncements
 } from '../data/seedData';
 
-import { syncCollectionToDatabase } from '../lib/databaseService';
+import { syncCollectionToDatabase, subscribeToDatabaseChanges, fetchDatabaseState } from '../lib/databaseService';
 
 export interface GoogleAuthPayload {
   email: string;
@@ -499,6 +499,96 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentUser]);
 
+  // Flag to avoid circular echo loops when updating state from remote Firebase RTDB events
+  const isUpdatingFromRemoteRef = React.useRef(false);
+
+  // Subscribe to live Firebase Realtime Database updates across all connected devices & sessions
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+
+    // 1. Initial fetch of remote state on mount
+    fetchDatabaseState().then((initialRemote) => {
+      if (initialRemote && typeof initialRemote === 'object') {
+        isUpdatingFromRemoteRef.current = true;
+        if (Array.isArray(initialRemote.devices) && initialRemote.devices.length > 0) {
+          setDevices(initialRemote.devices);
+        }
+        if (Array.isArray(initialRemote.users) && initialRemote.users.length > 0) {
+          setUsers(initialRemote.users);
+        }
+        if (Array.isArray(initialRemote.clients) && initialRemote.clients.length > 0) {
+          setClients(initialRemote.clients);
+        }
+        if (Array.isArray(initialRemote.projects) && initialRemote.projects.length > 0) {
+          setProjects(initialRemote.projects);
+        }
+        if (Array.isArray(initialRemote.assignments)) setAssignments(initialRemote.assignments);
+        if (Array.isArray(initialRemote.pickups)) setPickups(initialRemote.pickups);
+        if (Array.isArray(initialRemote.transfers)) setTransfers(initialRemote.transfers);
+        if (Array.isArray(initialRemote.returns)) setReturns(initialRemote.returns);
+        if (Array.isArray(initialRemote.movements)) setMovements(initialRemote.movements);
+        if (Array.isArray(initialRemote.tasks)) setTasks(initialRemote.tasks);
+        if (Array.isArray(initialRemote.incidents)) setIncidents(initialRemote.incidents);
+        if (Array.isArray(initialRemote.auditLogs)) setAuditLogs(initialRemote.auditLogs);
+        if (Array.isArray(initialRemote.clientOffices)) setClientOffices(initialRemote.clientOffices);
+        setTimeout(() => { isUpdatingFromRemoteRef.current = false; }, 300);
+      }
+    });
+
+    // 2. Continuous real-time listener for live multi-device data updates
+    unsubscribe = subscribeToDatabaseChanges((remoteData) => {
+      if (!remoteData || typeof remoteData !== 'object') return;
+
+      isUpdatingFromRemoteRef.current = true;
+
+      if (Array.isArray(remoteData.devices)) {
+        setDevices(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.devices) ? remoteData.devices! : prev);
+      }
+      if (Array.isArray(remoteData.users)) {
+        setUsers(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.users) ? remoteData.users! : prev);
+      }
+      if (Array.isArray(remoteData.clients)) {
+        setClients(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.clients) ? remoteData.clients! : prev);
+      }
+      if (Array.isArray(remoteData.projects)) {
+        setProjects(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.projects) ? remoteData.projects! : prev);
+      }
+      if (Array.isArray(remoteData.assignments)) {
+        setAssignments(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.assignments) ? remoteData.assignments! : prev);
+      }
+      if (Array.isArray(remoteData.pickups)) {
+        setPickups(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.pickups) ? remoteData.pickups! : prev);
+      }
+      if (Array.isArray(remoteData.transfers)) {
+        setTransfers(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.transfers) ? remoteData.transfers! : prev);
+      }
+      if (Array.isArray(remoteData.returns)) {
+        setReturns(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.returns) ? remoteData.returns! : prev);
+      }
+      if (Array.isArray(remoteData.movements)) {
+        setMovements(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.movements) ? remoteData.movements! : prev);
+      }
+      if (Array.isArray(remoteData.tasks)) {
+        setTasks(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.tasks) ? remoteData.tasks! : prev);
+      }
+      if (Array.isArray(remoteData.incidents)) {
+        setIncidents(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.incidents) ? remoteData.incidents! : prev);
+      }
+      if (Array.isArray(remoteData.auditLogs)) {
+        setAuditLogs(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.auditLogs) ? remoteData.auditLogs! : prev);
+      }
+      if (Array.isArray(remoteData.clientOffices)) {
+        setClientOffices(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.clientOffices) ? remoteData.clientOffices! : prev);
+      }
+
+      setTimeout(() => { isUpdatingFromRemoteRef.current = false; }, 300);
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY + '_users', JSON.stringify(users));
     localStorage.setItem(STORAGE_KEY + '_clients', JSON.stringify(clients));
@@ -524,23 +614,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(STORAGE_KEY + '_notifications', JSON.stringify(notifications));
     localStorage.setItem(STORAGE_KEY + '_announcements', JSON.stringify(announcements));
 
-    // Sync state changes directly to central Firebase Realtime Database
-    syncCollectionToDatabase('users', users);
-    syncCollectionToDatabase('clients', clients);
-    syncCollectionToDatabase('contacts', contacts);
-    syncCollectionToDatabase('employers', employers);
-    syncCollectionToDatabase('workers', workers);
-    syncCollectionToDatabase('devices', devices);
-    syncCollectionToDatabase('projects', projects);
-    syncCollectionToDatabase('assignments', assignments);
-    syncCollectionToDatabase('pickups', pickups);
-    syncCollectionToDatabase('transfers', transfers);
-    syncCollectionToDatabase('returns', returns);
-    syncCollectionToDatabase('movements', movements);
-    syncCollectionToDatabase('tasks', tasks);
-    syncCollectionToDatabase('incidents', incidents);
-    syncCollectionToDatabase('auditLogs', auditLogs);
-    syncCollectionToDatabase('offices', clientOffices);
+    // Push local mutation changes to central Firebase Realtime Database if not a remote update
+    if (!isUpdatingFromRemoteRef.current) {
+      syncCollectionToDatabase('users', users);
+      syncCollectionToDatabase('clients', clients);
+      syncCollectionToDatabase('contacts', contacts);
+      syncCollectionToDatabase('employers', employers);
+      syncCollectionToDatabase('workers', workers);
+      syncCollectionToDatabase('devices', devices);
+      syncCollectionToDatabase('projects', projects);
+      syncCollectionToDatabase('assignments', assignments);
+      syncCollectionToDatabase('pickups', pickups);
+      syncCollectionToDatabase('transfers', transfers);
+      syncCollectionToDatabase('returns', returns);
+      syncCollectionToDatabase('movements', movements);
+      syncCollectionToDatabase('tasks', tasks);
+      syncCollectionToDatabase('incidents', incidents);
+      syncCollectionToDatabase('auditLogs', auditLogs);
+      syncCollectionToDatabase('clientOffices', clientOffices);
+    }
   }, [users, clients, contacts, employers, workers, devices, projects, assignments, pickups, transfers, returns, movements, activityLogs, tasks, incidents, auditLogs, objectDefinitions, fieldDefinitions, massBatches, dynamicRecords, clientOffices, notifications, announcements]);
 
   // Helper to add audit log
