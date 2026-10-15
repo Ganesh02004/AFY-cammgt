@@ -318,6 +318,7 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
             {/* Operational Location & GPS */}
             <div className="md:col-span-2">
               <LocationPicker
+                autoDetectOnMount={true}
                 locationAddress={locationAddress}
                 latitude={latitude}
                 longitude={longitude}

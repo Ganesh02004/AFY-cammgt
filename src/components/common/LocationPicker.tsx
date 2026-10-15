@@ -321,6 +321,7 @@ interface LocationPickerProps {
   showCoordinates?: boolean;
   required?: boolean;
   className?: string;
+  autoDetectOnMount?: boolean;
 }
 
 export const LocationPicker: React.FC<LocationPickerProps> = ({
@@ -332,7 +333,8 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   placeholder = "Type address, city, landmark, or tech park...",
   showCoordinates = true,
   required = false,
-  className = ""
+  className = "",
+  autoDetectOnMount = false
 }) => {
   const [loadingGps, setLoadingGps] = useState(false);
   const [searchingLive, setSearchingLive] = useState(false);
@@ -349,6 +351,13 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   useEffect(() => {
     setQuery(locationAddress || '');
   }, [locationAddress]);
+
+  // Auto-detect location on mount if specified and address is empty
+  useEffect(() => {
+    if (autoDetectOnMount && !locationAddress && navigator.geolocation) {
+      handleGetCurrentLocation();
+    }
+  }, [autoDetectOnMount]);
 
   // Click outside to dismiss suggestions
   useEffect(() => {
@@ -499,8 +508,48 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     }
   };
 
-  // Optional manual GPS trigger (user does not need to use GPS to search)
-  const handleGetCurrentLocation = () => {
+  // Reverse geocoding helper using Nominatim / OpenStreetMap
+  const reverseGeocode = async (lat: number, lng: number): Promise<{
+    address: string;
+    city?: string;
+    state?: string;
+    pin_code?: string;
+  } | null> => {
+    try {
+      const resp = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+      );
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.address) {
+          const a = data.address;
+          const name = a.building || a.amenity || a.office || a.road || a.pedestrian || '';
+          const suburb = a.suburb || a.neighbourhood || a.industrial || a.residential || '';
+          const city = a.city || a.town || a.village || a.county || '';
+          const state = a.state || '';
+          const postcode = a.postcode || '';
+
+          const parts = [name, suburb, city, state, postcode].filter(Boolean);
+          const fullAddr = parts.length > 0 ? parts.join(', ') : data.display_name;
+
+          if (fullAddr) {
+            return {
+              address: fullAddr,
+              city,
+              state,
+              pin_code: postcode
+            };
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Reverse geocoding notice:", err);
+    }
+    return null;
+  };
+
+  // Optional manual or auto GPS trigger with Reverse Geocoding
+  const handleGetCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser environment.");
       return;
@@ -508,22 +557,56 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 
     setLoadingGps(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const lat = parseFloat(pos.coords.latitude.toFixed(6));
         const lng = parseFloat(pos.coords.longitude.toFixed(6));
-        const addr = query.trim() || `Field GPS Site (${lat}, ${lng})`;
-        setQuery(addr);
+
+        // Perform Reverse Geocoding to get human readable address
+        const geocoded = await reverseGeocode(lat, lng);
+
+        let finalAddr = '';
+        let city = geocoded?.city || '';
+        let state = geocoded?.state || '';
+        let pin_code = geocoded?.pin_code || '';
+
+        if (geocoded?.address) {
+          finalAddr = geocoded.address;
+        } else {
+          // If reverse geocoding API is unreachable or rate limited, find nearest local directory match
+          let minDistance = Infinity;
+          let nearest = KNOWN_LOCATION_SUGGESTIONS[0];
+          for (const item of KNOWN_LOCATION_SUGGESTIONS) {
+            const dist = Math.hypot(item.latitude - lat, item.longitude - lng);
+            if (dist < minDistance) {
+              minDistance = dist;
+              nearest = item;
+            }
+          }
+          if (minDistance < 0.1 && nearest) {
+            finalAddr = nearest.address;
+            city = nearest.city;
+            state = nearest.state;
+            pin_code = nearest.pin_code;
+          } else {
+            finalAddr = query.trim() || 'Central Field Operations Facility';
+          }
+        }
+
+        setQuery(finalAddr);
         onChange({
-          address: addr,
+          address: finalAddr,
           latitude: lat,
-          longitude: lng
+          longitude: lng,
+          city,
+          state,
+          pin_code
         });
         setLoadingGps(false);
         setGpsSuccess(true);
-        setTimeout(() => setGpsSuccess(false), 3000);
+        setTimeout(() => setGpsSuccess(false), 3500);
       },
       () => {
-        // Fallback default coordinates if device GPS denied
+        // Fallback default site if device GPS denied
         const defaultLat = 28.4907;
         const defaultLng = 77.0898;
         const fallbackAddr = query.trim() || "Building 10B, DLF Cyber City, Sector 24, Gurugram";
@@ -538,11 +621,11 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         });
         setLoadingGps(false);
         setGpsSuccess(true);
-        setTimeout(() => setGpsSuccess(false), 3000);
+        setTimeout(() => setGpsSuccess(false), 3500);
       },
-      { timeout: 7000 }
+      { timeout: 8000, enableHighAccuracy: true }
     );
-  };
+  }, [onChange, query]);
 
   return (
     <div className={`space-y-1.5 relative ${className}`} ref={dropdownRef}>
