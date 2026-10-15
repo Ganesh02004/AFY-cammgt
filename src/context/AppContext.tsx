@@ -3,7 +3,7 @@ import {
   User, ClientCompany, ClientContact, EmployerCompany, Worker,
   Device, Assignment, Pickup, Transfer, DeviceReturn, DeviceMovement,
   DeviceActivityLog, Task, Incident, AuditLog, ObjectDefinition, FieldDefinition,
-  MassCameraAssignmentBatch, DynamicRecord, DeviceCondition, DeviceStatus, CustodianType,
+  MassCameraAssignmentBatch, DynamicRecord, DeviceCondition, DeviceStatus, DeviceType, CustodianType,
   InspectionResult, ReturnOutcome, UserRole, Project, ClientOffice, AppNotification, Announcement
 } from '../types';
 import {
@@ -109,6 +109,22 @@ interface AppContextType {
     longitude?: number | null;
     locationAddress?: string;
   }) => { success: boolean; assignment?: Assignment; error?: string };
+
+  createDevice: (deviceData: {
+    asset_id?: string;
+    device_type: DeviceType;
+    brand_and_model: string;
+    imei_or_serial: string;
+    accessories?: string;
+    condition: DeviceCondition;
+    source_client_id: number;
+    project_id?: number;
+    initial_poc_id?: number;
+    current_status?: DeviceStatus;
+    notes?: string;
+    photo?: string;
+    location_address?: string;
+  }) => { success: boolean; device?: Device; error?: string };
 
   initiateTransfer: (params: {
     deviceId: number;
@@ -1056,6 +1072,119 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProjects(prev => prev.filter(p => p.id !== id));
     addAuditLog("DELETE_PROJECT", "Project", String(id), `Deleted unlinked project #${id}`);
     return { success: true };
+  };
+
+  // DIRECT SINGLE DEVICE CREATION
+  const createDevice = (deviceData: {
+    asset_id?: string;
+    device_type: DeviceType;
+    brand_and_model: string;
+    imei_or_serial: string;
+    accessories?: string;
+    condition: DeviceCondition;
+    source_client_id: number;
+    project_id?: number;
+    initial_poc_id?: number;
+    current_status?: DeviceStatus;
+    notes?: string;
+    photo?: string;
+    location_address?: string;
+  }) => {
+    if (!currentUser) return { success: false, error: "Authentication required." };
+    
+    if (!deviceData.brand_and_model || !deviceData.brand_and_model.trim()) {
+      return { success: false, error: "Brand & Model is required." };
+    }
+
+    if (!deviceData.imei_or_serial || !deviceData.imei_or_serial.trim()) {
+      return { success: false, error: "Serial Number / IMEI is mandatory." };
+    }
+
+    if (!deviceData.source_client_id) {
+      return { success: false, error: "Source Client Company is required." };
+    }
+
+    const client = clients.find(c => c.id === deviceData.source_client_id);
+    if (!client) return { success: false, error: "Selected Client Company not found." };
+
+    const serialTrimmed = deviceData.imei_or_serial.trim();
+    if (devices.some(ex => ex.imei_or_serial && ex.imei_or_serial.toLowerCase() === serialTrimmed.toLowerCase())) {
+      return { success: false, error: `A device with Serial Number / IMEI '${serialTrimmed}' already exists in inventory.` };
+    }
+
+    if (deviceData.asset_id && deviceData.asset_id.trim()) {
+      const assetTrimmed = deviceData.asset_id.trim();
+      if (devices.some(ex => ex.asset_id.toLowerCase() === assetTrimmed.toLowerCase())) {
+        return { success: false, error: `Asset ID '${assetTrimmed}' is already in use by another device.` };
+      }
+    }
+
+    const now = new Date().toISOString();
+    const devId = Date.now();
+    const assetId = deviceData.asset_id?.trim() || getNextSequenceId(deviceData.device_type === 'CAMERA' ? 'CAM' : 'DEV');
+    const qrToken = crypto.randomUUID ? crypto.randomUUID() : `token-${devId}-${Math.random().toString(36).substring(2, 9)}`;
+
+    const newDev: Device = {
+      id: devId,
+      asset_id: assetId,
+      qr_token: qrToken,
+      device_type: deviceData.device_type,
+      brand_and_model: deviceData.brand_and_model.trim(),
+      imei_or_serial: serialTrimmed,
+      accessories: deviceData.accessories || '',
+      condition: deviceData.condition,
+      source_client_id: deviceData.source_client_id,
+      project_id: deviceData.project_id,
+      initial_poc_id: deviceData.initial_poc_id,
+      current_status: deviceData.current_status || 'WITH_COLLECTOR',
+      current_custodian_type: 'USER',
+      current_custodian_user_id: currentUser.id,
+      current_custodian_worker_id: null,
+      received_date: now,
+      notes: deviceData.notes || '',
+      created_at: now,
+      updated_at: now,
+      photo: deviceData.photo
+    };
+
+    const newMovement: DeviceMovement = {
+      id: Date.now() + 10,
+      device_id: devId,
+      from_custodian_type: 'CLIENT',
+      from_custodian_name: `Client: ${client.name}`,
+      to_custodian_type: 'USER',
+      to_custodian_name: `${currentUser.first_name} ${currentUser.last_name}`.trim() || currentUser.username,
+      from_status: 'Expected',
+      to_status: 'With Collector / In Transit',
+      actor_id: currentUser.id,
+      actor_name: `${currentUser.first_name} ${currentUser.last_name}`.trim() || currentUser.username,
+      timestamp: now,
+      related_transaction_type: 'INTAKE',
+      related_transaction_id: String(devId),
+      notes: `Direct intake from ${client.name}`
+    };
+
+    const newActivity: DeviceActivityLog = {
+      id: Date.now() + 20,
+      device_id: devId,
+      action: 'COLLECTED_FROM_CLIENT',
+      timestamp: now,
+      actor_id: currentUser.id,
+      actor_name: `${currentUser.first_name} ${currentUser.last_name}`.trim() || currentUser.username,
+      actor_role: currentUser.role,
+      details: `Direct device creation. Condition: ${deviceData.condition}. Accessories: ${deviceData.accessories || 'None'}`,
+      location_address: deviceData.location_address || `${client.name} Facility`,
+      related_transaction_type: 'INTAKE',
+      related_transaction_id: String(devId)
+    };
+
+    setDevices(prev => [newDev, ...prev]);
+    setMovements(prev => [newMovement, ...prev]);
+    setActivityLogs(prev => [newActivity, ...prev]);
+
+    addAuditLog('CREATE_DEVICE', 'Device', assetId, `Created device '${assetId}' (${deviceData.brand_and_model}) for Client '${client.name}'`);
+
+    return { success: true, device: newDev };
   };
 
   // INTAKE (Collect from Client)
@@ -2318,7 +2447,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isSessionLocked, unlockSession, remainingTimeoutSeconds,
       createProject, updateProject, archiveProject, deleteProject,
       getNextSequenceId,
-      intakeDevices, assignDeviceToWorker, initiateTransfer,
+      intakeDevices, createDevice, assignDeviceToWorker, initiateTransfer,
       acceptTransfer, rejectTransfer, cancelTransfer,
       processReturn, completeInspection, auditedAdjustment, deleteDevice,
       executeMassAssignment, createTask, updateTaskStatus,

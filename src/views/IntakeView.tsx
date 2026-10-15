@@ -114,25 +114,40 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
     setNewPocDesignation('');
   };
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') {
+      e.preventDefault();
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    const newErrors: Record<string, string> = {};
 
     if (!selectedClientId) {
+      newErrors['client'] = "Source Client Company is required.";
       setErrorMsg("Please select a Source Client Company.");
-      return;
     }
 
-    for (let i = 0; i < devicesData.length; i++) {
-      const row = devicesData[i];
-      if (!row.brand_and_model.trim()) {
-        setErrorMsg(`Row #${i + 1}: Brand & Model is required.`);
-        return;
+    devicesData.forEach((row, i) => {
+      if (!row.brand_and_model || !row.brand_and_model.trim()) {
+        newErrors[`row-${i}-brand`] = "Brand & Model is required.";
       }
       if (!row.imei_or_serial || !row.imei_or_serial.trim()) {
-        setErrorMsg(`Row #${i + 1}: Serial Number / IMEI is mandatory.`);
-        return;
+        newErrors[`row-${i}-serial`] = "Serial Number / IMEI is mandatory.";
       }
+    });
+
+    setFieldErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      if (!errorMsg) {
+        setErrorMsg("Please correct the highlighted fields before submitting.");
+      }
+      return;
     }
 
     const res = intakeDevices({
@@ -147,7 +162,7 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
         asset_id: d.asset_id.trim() || undefined,
         device_type: d.device_type,
         brand_and_model: d.brand_and_model.trim(),
-        imei_or_serial: d.imei_or_serial.trim() || undefined,
+        imei_or_serial: d.imei_or_serial.trim(),
         accessories: (d.selected_accessories && d.selected_accessories.length > 0) ? d.selected_accessories.join(', ') : (d.accessories || 'None'),
         condition: d.condition,
         notes: d.notes
@@ -155,8 +170,9 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
     });
 
     if (!res.success) {
-      setErrorMsg(res.error || "Failed to complete device intake.");
+      setErrorMsg(res.error || "Failed to complete device intake. Record was NOT saved.");
     } else {
+      setFieldErrors({});
       setSuccessInfo({ pickupId: res.pickup!.id, count: res.createdDevices!.length });
     }
   };
@@ -167,17 +183,23 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
         <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
           <CheckCircle2 className="w-8 h-8" />
         </div>
-        <h2 className="text-2xl font-black text-slate-900">Intake Completed Successfully!</h2>
+        <h2 className="text-2xl font-black text-slate-900">Device Intake Verified & Saved!</h2>
         <p className="text-sm text-slate-600 max-w-md mx-auto">
-          Successfully processed intake of <span className="font-bold text-slate-900">{successInfo.count} devices</span> under Pickup batch #{successInfo.pickupId}. Custody has been atomically transferred to your active staff account.
+          Successfully processed and saved <span className="font-bold text-slate-900">{successInfo.count} devices</span> under Pickup batch #{successInfo.pickupId}. Records are committed to the central database and synchronized across all sessions.
         </p>
 
-        <div className="pt-4 flex items-center justify-center space-x-3">
+        <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
           <button
-            onClick={() => onNavigate('my_inventory')}
+            onClick={() => onNavigate('master_inventory', { initialFilterStatus: 'ALL' })}
             className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition"
           >
-            View in My Inventory
+            View in Master Inventory
+          </button>
+          <button
+            onClick={() => onNavigate('my_inventory')}
+            className="px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl border border-indigo-200 transition"
+          >
+            View in My Custody
           </button>
           <button
             onClick={() => {
@@ -411,11 +433,20 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
                     <input
                       type="text"
                       value={row.brand_and_model}
-                      onChange={(e) => updateRow(row.id, 'brand_and_model', e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      onChange={(e) => {
+                        updateRow(row.id, 'brand_and_model', e.target.value);
+                        if (fieldErrors[`row-${idx}-brand`]) {
+                          setFieldErrors(prev => ({ ...prev, [`row-${idx}-brand`]: '' }));
+                        }
+                      }}
                       placeholder="e.g. Sony Alpha 7 IV"
-                      className="form-input text-xs"
+                      className={`form-input text-xs ${fieldErrors[`row-${idx}-brand`] ? 'border-rose-500 ring-2 ring-rose-200' : ''}`}
                       required
                     />
+                    {fieldErrors[`row-${idx}-brand`] && (
+                      <p className="text-[10px] text-rose-600 font-bold mt-1">{fieldErrors[`row-${idx}-brand`]}</p>
+                    )}
                   </div>
 
                   {/* Serial / IMEI */}
@@ -427,10 +458,19 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
                       type="text"
                       required
                       value={row.imei_or_serial}
-                      onChange={(e) => updateRow(row.id, 'imei_or_serial', e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      onChange={(e) => {
+                        updateRow(row.id, 'imei_or_serial', e.target.value);
+                        if (fieldErrors[`row-${idx}-serial`]) {
+                          setFieldErrors(prev => ({ ...prev, [`row-${idx}-serial`]: '' }));
+                        }
+                      }}
                       placeholder="e.g. SN-SONY-77801"
-                      className="form-input text-xs font-mono"
+                      className={`form-input text-xs font-mono ${fieldErrors[`row-${idx}-serial`] ? 'border-rose-500 ring-2 ring-rose-200' : ''}`}
                     />
+                    {fieldErrors[`row-${idx}-serial`] && (
+                      <p className="text-[10px] text-rose-600 font-bold mt-1">{fieldErrors[`row-${idx}-serial`]}</p>
+                    )}
                   </div>
 
                   {/* Condition */}

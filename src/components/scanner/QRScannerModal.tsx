@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { X, Camera, Search, Smartphone, RefreshCw, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
+import QRCode from 'qrcode';
+import { X, Camera, Search, Smartphone, RefreshCw, AlertCircle, CheckCircle2, ArrowRight, Copy, Check } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Device } from '../../types';
+import { GlobalSearchWithSuggestions } from '../common/GlobalSearchWithSuggestions';
 
 interface QRScannerModalProps {
   isOpen: boolean;
@@ -22,7 +24,22 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose,
   const [pairingStatus, setPairingStatus] = useState<'waiting' | 'paired'>('waiting');
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const pairingCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   const scannerContainerId = 'interactive-qr-reader';
+
+  const pairingUrl = typeof window !== 'undefined' ? `${window.location.origin}/?pairToken=${pairingToken}` : '';
+
+  useEffect(() => {
+    if (activeTab === 'remote' && pairingCanvasRef.current && pairingUrl) {
+      QRCode.toCanvas(pairingCanvasRef.current, pairingUrl, {
+        width: 150,
+        margin: 1,
+        color: { dark: '#1e1b4b', light: '#ffffff' },
+        errorCorrectionLevel: 'M'
+      });
+    }
+  }, [activeTab, pairingUrl]);
 
   // Process scanned or queried string
   const handleFoundValue = (rawVal: string) => {
@@ -216,43 +233,30 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose,
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Asset ID, IMEI, or Serial Number
+                  Type Asset ID, Model, or Serial Number for Live Suggestions
                 </label>
-                <div className="flex space-x-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={manualQuery}
-                      onChange={(e) => setManualQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleFoundValue(manualQuery)}
-                      placeholder="e.g. CAM-2026-0001, SN-SONY-77801..."
-                      className="form-input text-xs"
-                      autoFocus
-                    />
-                  </div>
-                  <button
-                    onClick={() => handleFoundValue(manualQuery)}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition flex items-center space-x-1"
-                  >
-                    <Search className="w-3.5 h-3.5" />
-                    <span>Search</span>
-                  </button>
-                </div>
+                <GlobalSearchWithSuggestions
+                  onSelectDevice={(dev) => {
+                    onSelectDevice(dev);
+                    onClose();
+                  }}
+                  placeholder="Type to search (e.g. CAM-2026, Sony, SN-7780)..."
+                />
               </div>
 
               <div className="pt-2">
                 <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Quick Select Active Fleet Units
+                  Quick Select Active Fleet Units ({devices.length})
                 </div>
-                <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                  {devices.slice(0, 6).map((d) => (
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {devices.slice(0, 8).map((d) => (
                     <button
                       key={d.id}
                       onClick={() => {
                         onSelectDevice(d);
                         onClose();
                       }}
-                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 transition flex items-center justify-between group"
+                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 transition flex items-center justify-between group cursor-pointer"
                     >
                       <div>
                         <div className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 font-mono">
@@ -272,32 +276,58 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose,
 
           {activeTab === 'remote' && (
             <div className="space-y-4 text-center py-2">
-              <div className="inline-block p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
-                <Smartphone className="w-10 h-10 text-indigo-600 mx-auto mb-2" />
-                <h4 className="font-bold text-slate-900 text-sm">Desktop-to-Mobile Scanner Pairing</h4>
-                <p className="text-xs text-slate-500 max-w-xs mt-1">
-                  Use your phone's camera to scan equipment tags while working comfortably on your desktop.
+              <div className="p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl flex flex-col items-center">
+                <div className="flex items-center space-x-2 text-indigo-900 font-extrabold text-sm mb-1">
+                  <Smartphone className="w-5 h-5 text-indigo-600" />
+                  <span>Desktop-to-Mobile Remote Pairing</span>
+                </div>
+                <p className="text-xs text-slate-600 max-w-xs mb-3">
+                  Scan this QR code with your mobile phone camera to open the remote scanner interface.
                 </p>
+
+                {/* Pairing QR Canvas */}
+                <div className="p-2.5 bg-white border border-indigo-200 rounded-2xl shadow-sm mb-2">
+                  <canvas ref={pairingCanvasRef} className="rounded-lg" />
+                </div>
+
+                <div className="flex items-center space-x-2 text-xs font-mono font-bold text-indigo-700 bg-white px-3 py-1 rounded-lg border border-indigo-200">
+                  <span>Pair Token: {pairingToken}</span>
+                  <button
+                    onClick={() => {
+                      if (pairingUrl) {
+                        navigator.clipboard.writeText(pairingUrl);
+                        setCopiedLink(true);
+                        setTimeout(() => setCopiedLink(false), 2000);
+                      }
+                    }}
+                    className="text-slate-400 hover:text-indigo-600 ml-1"
+                    title="Copy Link"
+                  >
+                    {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="text-xs font-semibold text-slate-600">Pairing Session Code</div>
-                <div className="font-mono text-xl font-black text-indigo-700 tracking-widest my-1">
-                  {pairingToken}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                <div className="flex items-center justify-between text-slate-600 font-semibold mb-1">
+                  <span>Pairing Session Status</span>
+                  <span className="text-[10px] text-slate-400 font-mono">Token valid (10m expiry)</span>
                 </div>
-                <div className="text-[11px] text-slate-400">
-                  Status: {pairingStatus === 'waiting' ? (
-                    <span className="text-amber-600 font-bold animate-pulse">● Waiting for phone stream</span>
+                <div className="text-xs text-slate-700 font-medium flex items-center justify-center">
+                  {pairingStatus === 'waiting' ? (
+                    <span className="text-amber-600 font-bold animate-pulse flex items-center">
+                      <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" /> Waiting for mobile device connection...
+                    </span>
                   ) : (
-                    <span className="text-emerald-600 font-bold flex items-center justify-center">
-                      <CheckCircle2 className="w-3 h-3 mr-1" /> Mobile Connected
+                    <span className="text-emerald-600 font-bold flex items-center">
+                      <CheckCircle2 className="w-4 h-4 mr-1" /> Remote Mobile Scanner Connected
                     </span>
                   )}
                 </div>
               </div>
 
               <p className="text-[11px] text-slate-500">
-                Point your phone's browser to the remote scanner view with pairing token to broadcast real-time scans directly into this terminal.
+                🔒 Does not transmit login credentials. Uses short-lived ephemeral session token.
               </p>
             </div>
           )}

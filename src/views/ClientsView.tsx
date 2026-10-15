@@ -10,20 +10,27 @@ import { ClientCompany, ClientContact, ClientOffice, Project, ProjectType, Offic
 
 interface ClientsViewProps {
   onNavigate: (view: string, params?: any) => void;
+  initialClientId?: number;
+  initialCreateMode?: boolean;
 }
 
-export const ClientsView: React.FC<ClientsViewProps> = ({ onNavigate }) => {
+export const ClientsView: React.FC<ClientsViewProps> = ({ 
+  onNavigate, 
+  initialClientId, 
+  initialCreateMode 
+}) => {
   const { 
-    clients, contacts, devices, projects, clientOffices, currentUser,
+    clients, contacts, devices, projects, clientOffices, currentUser, users, workers, movements, activityLogs,
     createClient, updateClient,
     createClientOffice, updateClientOffice, toggleOfficeStatus, deleteClientOffice,
     createContact, updateContact, deleteContact,
-    createProject
+    createProject, processReturn
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
-  const [detailTab, setDetailTab] = useState<'offices' | 'projects' | 'contacts' | 'devices'>('offices');
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(initialClientId || null);
+  const [isFullPageCreate, setIsFullPageCreate] = useState<boolean>(Boolean(initialCreateMode));
+  const [detailTab, setDetailTab] = useState<'offices' | 'projects' | 'contacts' | 'devices' | 'history'>('offices');
 
   // Client Modals
   const [showAddClient, setShowAddClient] = useState(false);
@@ -72,6 +79,31 @@ export const ClientsView: React.FC<ClientsViewProps> = ({ onNavigate }) => {
   const [quickProjectLat, setQuickProjectLat] = useState<number | null>(null);
   const [quickProjectLng, setQuickProjectLng] = useState<number | null>(null);
   const [quickProjectContactIds, setQuickProjectContactIds] = useState<number[]>([]);
+
+  // Return to Client Modal State
+  const [returnDeviceModal, setReturnDeviceModal] = useState<any>(null);
+  const [returnPocId, setReturnPocId] = useState<number>(0);
+  const [returnCondition, setReturnCondition] = useState<string>('EXCELLENT');
+  const [returnNotes, setReturnNotes] = useState<string>('');
+
+  const handleReturnToClientSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!returnDeviceModal || !currentUser || !selectedClientId) return;
+
+    const client = clients.find(c => c.id === selectedClientId);
+    const poc = contacts.find(c => c.id === returnPocId);
+
+    processReturn({
+      deviceId: returnDeviceModal.id,
+      workerId: 0,
+      condition: returnCondition,
+      notes: `Formally returned to Client ${client?.name} (Recipient POC: ${poc?.name || 'Authorized Client Rep'}). ${returnNotes}`,
+      locationAddress: client?.address
+    });
+
+    setReturnDeviceModal(null);
+    setReturnNotes('');
+  };
 
   const filtered = clients.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -807,34 +839,124 @@ export const ClientsView: React.FC<ClientsViewProps> = ({ onNavigate }) => {
               </div>
             )}
 
-            {/* 4. Equipment Fleet */}
+            {/* 4. Client Dedicated Equipment Inventory & Return Ledger */}
             {detailTab === 'devices' && (
               <div className="space-y-4">
-                <h4 className="font-bold text-slate-900 text-sm">Collected Equipment ({activeClientDevices.length} Units)</h4>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-sm">
+                      {activeClient.name} Dedicated Equipment Register ({activeClientDevices.length} Units)
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Central synchronized inventory ledger tracking all cameras and tracking hardware sourced from {activeClient.name}.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => onNavigate('intake')}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1 shrink-0 self-start sm:self-auto cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Intake Equipment from {activeClient.name}</span>
+                  </button>
+                </div>
+
                 {activeClientDevices.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-6 text-center">No camera equipment collected from this client yet.</p>
+                  <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
+                    <Camera className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-xs text-slate-500 font-medium">No equipment collected from this client yet.</p>
+                    <button
+                      onClick={() => onNavigate('intake')}
+                      className="mt-2 text-xs font-bold text-indigo-600 hover:text-indigo-800"
+                    >
+                      + Start Intake for {activeClient.name}
+                    </button>
+                  </div>
                 ) : (
-                  <div className="max-h-72 overflow-y-auto space-y-2">
-                    {activeClientDevices.map(d => (
-                      <div key={d.id} className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between text-xs">
-                        <div>
-                          <span className="font-mono font-bold text-indigo-700">{d.asset_id}</span>
-                          <span className="ml-2.5 font-medium text-slate-800">{d.brand_and_model}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-[11px] text-slate-500">{d.current_status}</span>
-                          <button
-                            onClick={() => {
-                              setSelectedClientId(null);
-                              onNavigate('device_detail', { deviceId: d.id });
-                            }}
-                            className="text-indigo-600 hover:text-indigo-800 font-bold ml-2"
-                          >
-                            View
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        <tr>
+                          <th className="p-3">Asset ID / Model</th>
+                          <th className="p-3">Serial / IMEI</th>
+                          <th className="p-3">Condition & Accessories</th>
+                          <th className="p-3">Current Custodian / Holder</th>
+                          <th className="p-3">Status</th>
+                          <th className="p-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {activeClientDevices.map(d => {
+                          const isReturned = d.current_status === 'RETURNED_TO_CLIENT';
+                          let custodianName = 'Storage / Depot';
+                          if (d.current_custodian_type === 'USER') {
+                            const u = users.find(x => x.id === d.current_custodian_user_id);
+                            custodianName = u ? `${u.first_name} ${u.last_name}` : 'Staff User';
+                          } else if (d.current_custodian_type === 'WORKER') {
+                            const w = workers.find(x => x.id === d.current_custodian_worker_id);
+                            custodianName = w ? `Worker: ${w.name}` : 'Worker';
+                          } else if (d.current_custodian_type === 'CLIENT') {
+                            custodianName = `Client: ${activeClient.name}`;
+                          }
+
+                          return (
+                            <tr key={d.id} className="hover:bg-slate-50/80 transition">
+                              <td className="p-3 font-medium">
+                                <div className="font-mono font-bold text-indigo-700">{d.asset_id}</div>
+                                <div className="text-slate-900 font-bold mt-0.5">{d.brand_and_model}</div>
+                              </td>
+                              <td className="p-3 font-mono text-slate-700">
+                                {d.imei_or_serial || 'None'}
+                              </td>
+                              <td className="p-3">
+                                <div className="font-semibold text-slate-800">{d.condition}</div>
+                                <div className="text-[11px] text-slate-500 truncate max-w-[180px]">
+                                  {d.accessories || 'Standard Accessories'}
+                                </div>
+                              </td>
+                              <td className="p-3">
+                                <div className="font-semibold text-slate-800">{custodianName}</div>
+                                <div className="text-[10px] text-slate-400">Type: {d.current_custodian_type}</div>
+                              </td>
+                              <td className="p-3">
+                                <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
+                                  isReturned
+                                    ? 'bg-slate-100 text-slate-700 border border-slate-200'
+                                    : d.current_status === 'ASSIGNED_WORKER'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-emerald-100 text-emerald-800'
+                                }`}>
+                                  {d.current_status}
+                                </span>
+                              </td>
+                              <td className="p-3 text-right space-x-2">
+                                {!isReturned && (
+                                  <button
+                                    onClick={() => {
+                                      setReturnDeviceModal(d);
+                                      setReturnPocId(activeClientContacts[0]?.id || 0);
+                                      setReturnCondition(d.condition);
+                                      setReturnNotes('');
+                                    }}
+                                    className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold rounded-lg text-[11px] transition cursor-pointer"
+                                  >
+                                    Return to Client
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setSelectedClientId(null);
+                                    onNavigate('device_detail', { deviceId: d.id });
+                                  }}
+                                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] transition cursor-pointer"
+                                >
+                                  Ledger
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
@@ -1359,6 +1481,85 @@ export const ClientsView: React.FC<ClientsViewProps> = ({ onNavigate }) => {
                   className="px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition"
                 >
                   Save Project
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Return Device to Client Modal */}
+      {returnDeviceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-100">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-base">Formally Return Device to Client</h3>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">{returnDeviceModal.asset_id} • {returnDeviceModal.brand_and_model}</p>
+              </div>
+              <button
+                onClick={() => setReturnDeviceModal(null)}
+                className="text-slate-400 hover:text-slate-600 rounded-full p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleReturnToClientSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Recipient Client Contact / POC *</label>
+                <select
+                  value={returnPocId}
+                  onChange={(e) => setReturnPocId(Number(e.target.value))}
+                  className="form-select text-xs"
+                >
+                  <option value={0}>-- Select Receiving Client POC --</option>
+                  {activeClientContacts.map(poc => (
+                    <option key={poc.id} value={poc.id}>
+                      {poc.name} ({poc.designation || 'Contact Rep'}) - {poc.phone}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Return Physical Condition *</label>
+                <select
+                  value={returnCondition}
+                  onChange={(e) => setReturnCondition(e.target.value)}
+                  className="form-select text-xs"
+                >
+                  <option value="EXCELLENT">Excellent (Like New)</option>
+                  <option value="GOOD">Good (Minor Scuffs)</option>
+                  <option value="FAIR">Fair (Visible Wear)</option>
+                  <option value="DAMAGED">Damaged / Non-Functional</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Handover Confirmation & Notes</label>
+                <textarea
+                  rows={3}
+                  value={returnNotes}
+                  onChange={(e) => setReturnNotes(e.target.value)}
+                  placeholder="Record formal handover manifest reference, optical inspection notes, or signed receipt details..."
+                  className="form-textarea text-xs"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end space-x-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setReturnDeviceModal(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-xs transition"
+                >
+                  Confirm Formal Return
                 </button>
               </div>
             </form>

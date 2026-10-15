@@ -9,6 +9,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { UserRole } from '../../types';
 import { PurgeDataModal } from './PurgeDataModal';
+import { GlobalSearchWithSuggestions } from '../common/GlobalSearchWithSuggestions';
 
 interface NavbarProps {
   currentView: string;
@@ -51,6 +52,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenS
                 <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-600 block">(Any Thing For You) Inventory</span>
               </div>
             </button>
+
+            {/* Global Quick Search Bar */}
+            {currentUser && (
+              <div className="hidden md:block w-64 xl:w-80 ml-3">
+                <GlobalSearchWithSuggestions
+                  onSelectDevice={(dev) => onNavigate('device-detail', { deviceId: dev.id })}
+                  placeholder="Quick Search Asset, Serial, Custodian..."
+                />
+              </div>
+            )}
 
             {/* Desktop Navigation Links */}
             {currentUser && (

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { DeviceStatusBadge, ConditionBadge } from '../components/common/Badge';
+import { AddDeviceModal } from '../components/common/AddDeviceModal';
 
 interface MyInventoryViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -15,6 +16,8 @@ export const MyInventoryView: React.FC<MyInventoryViewProps> = ({ onNavigate, on
   const { currentUser, devices, clients } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('ALL');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   if (!currentUser) return null;
 
@@ -50,13 +53,20 @@ export const MyInventoryView: React.FC<MyInventoryViewProps> = ({ onNavigate, on
           </p>
         </div>
 
-        <div className="flex items-center space-x-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
-            onClick={() => onNavigate('intake')}
-            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center space-x-1.5"
+            onClick={() => setIsAddModalOpen(true)}
+            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Collect from Client</span>
+            <span>+ Add Device</span>
+          </button>
+          <button
+            onClick={() => onNavigate('intake')}
+            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5"
+          >
+            <Box className="w-4 h-4" />
+            <span>Intake Batch</span>
           </button>
           <button
             onClick={onOpenScanner}
@@ -198,6 +208,24 @@ export const MyInventoryView: React.FC<MyInventoryViewProps> = ({ onNavigate, on
           })}
         </div>
       )}
+
+      {notice && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center justify-between">
+          <span>{notice}</span>
+          <button onClick={() => setNotice(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+      )}
+
+      <AddDeviceModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={(newDev) => {
+          setSearchTerm(newDev.asset_id);
+          setFilterType('ALL');
+          setNotice(`Device '${newDev.asset_id}' saved successfully and added to your custody inventory!`);
+          setTimeout(() => setNotice(null), 5000);
+        }}
+      />
     </div>
   );
 };

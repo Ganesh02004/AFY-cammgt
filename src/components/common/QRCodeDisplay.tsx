@@ -19,8 +19,9 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
   const [dataUrl, setDataUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
-  // Payload encodes deterministic opaque URL / lookup: /device/qr/{token}
-  const payload = `/device/qr/${qrToken}/`;
+  // Payload encodes accessible full URL: origin + scanToken
+  const originUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const payload = originUrl ? `${originUrl}/?scanToken=${encodeURIComponent(qrToken)}` : `/device/qr/${qrToken}/`;
 
   useEffect(() => {
     if (canvasRef.current) {

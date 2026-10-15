@@ -8,6 +8,7 @@ import { useApp } from '../context/AppContext';
 import { DeviceStatusBadge, ConditionBadge } from '../components/common/Badge';
 import { DeviceStatus, DeviceType, Device } from '../types';
 import { exportDevicesToCSV, exportDevicesToExcel, getDeviceCustodianDisplay } from '../utils/exportUtils';
+import { AddDeviceModal } from '../components/common/AddDeviceModal';
 
 interface MasterInventoryViewProps {
   onNavigate: (view: string, params?: any) => void;
@@ -26,6 +27,7 @@ export const MasterInventoryView: React.FC<MasterInventoryViewProps> = ({
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<number[]>([]);
   const [exportNotice, setExportNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const filtered = devices.filter(d => {
     const matchesSearch = 
@@ -189,11 +191,19 @@ export const MasterInventoryView: React.FC<MasterInventoryViewProps> = ({
           </button>
 
           <button
-            onClick={() => onNavigate('intake')}
-            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5"
+            onClick={() => setIsAddModalOpen(true)}
+            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Intake Equipment</span>
+            <span>+ Add Device</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('intake')}
+            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5 cursor-pointer"
+          >
+            <Boxes className="w-4 h-4" />
+            <span>Intake Batch</span>
           </button>
         </div>
       </div>
@@ -460,6 +470,21 @@ export const MasterInventoryView: React.FC<MasterInventoryViewProps> = ({
           </span>
         </div>
       </div>
+
+      <AddDeviceModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={(newDev) => {
+          setStatusFilter('ALL');
+          setTypeFilter('ALL');
+          setSearchTerm(newDev.asset_id);
+          setExportNotice({
+            type: 'success',
+            message: `Device '${newDev.asset_id}' (${newDev.brand_and_model}) saved successfully to database!`
+          });
+          setTimeout(() => setExportNotice(null), 5000);
+        }}
+      />
     </div>
   );
 };

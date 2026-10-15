@@ -21,7 +21,8 @@ export const AssignWorkerView: React.FC<AssignWorkerViewProps> = ({
   const assignableDevices = devices.filter(d => {
     if (d.current_status === 'ASSIGNED_WORKER') return false;
     if (['LOST', 'RETIRED', 'RETURNED_TO_CLIENT', 'DAMAGED', 'AWAITING_INSPECTION'].includes(d.current_status)) return false;
-    if (currentUser?.role === 'ADMIN') return true;
+    if (currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGEMENT') return true;
+    if (d.current_custodian_type === 'STORAGE') return true;
     return d.current_custodian_type === 'USER' && d.current_custodian_user_id === currentUser?.id;
   });
 

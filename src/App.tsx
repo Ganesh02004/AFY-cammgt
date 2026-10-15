@@ -135,6 +135,7 @@ export const App: React.FC = () => {
 
             case 'assign':
             case 'assign-worker':
+            case 'assign_worker':
               return (
                 <AssignWorkerView
                   onNavigate={navigateTo}
@@ -152,6 +153,7 @@ export const App: React.FC = () => {
 
             case 'returns':
             case 'return-process':
+            case 'return_process':
               return (
                 <ReturnProcessView
                   onNavigate={navigateTo}
@@ -162,6 +164,7 @@ export const App: React.FC = () => {
 
             case 'inspection':
             case 'inspection-queue':
+            case 'inspection_queue':
               return <InspectionQueueView onNavigate={navigateTo} />;
 
             case 'incidents':
@@ -173,6 +176,7 @@ export const App: React.FC = () => {
               );
 
             case 'mass-assignment':
+            case 'mass_assignment':
               return (
                 <MassAssignmentView
                   onNavigate={navigateTo}
@@ -192,7 +196,13 @@ export const App: React.FC = () => {
               );
 
             case 'clients':
-              return <ClientsView onNavigate={navigateTo} />;
+              return (
+                <ClientsView 
+                  onNavigate={navigateTo}
+                  initialClientId={viewParams?.clientId}
+                  initialCreateMode={viewParams?.mode === 'create'}
+                />
+              );
 
             case 'workers':
               return <WorkersView onNavigate={navigateTo} />;
