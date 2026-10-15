@@ -53,19 +53,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenS
               </div>
             </button>
 
-            {/* Global Quick Search Bar */}
-            {currentUser && (
-              <div className="hidden md:block w-64 xl:w-80 ml-3">
-                <GlobalSearchWithSuggestions
-                  onSelectDevice={(dev) => onNavigate('device-detail', { deviceId: dev.id })}
-                  placeholder="Quick Search Asset, Serial, Custodian..."
-                />
-              </div>
-            )}
-
             {/* Desktop Navigation Links */}
             {currentUser && (
-              <div className="hidden lg:flex items-center space-x-1 ml-6">
+              <div className="hidden lg:flex items-center space-x-1 ml-4 shrink-0">
                 <button
                   onClick={() => onNavigate('dashboard')}
                   className={`px-3 py-2 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 ${
@@ -272,8 +262,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenS
             )}
           </div>
 
-          {/* User Profile, Role Badge, Quick Switcher */}
-          <div className="flex items-center space-x-3">
+          {/* User Profile, Role Badge, Quick Switcher & Global Search */}
+          <div className="flex items-center space-x-2 md:space-x-3 shrink min-w-0">
+            {currentUser && (
+              <div className="hidden md:block w-44 lg:w-56 xl:w-64 shrink min-w-0">
+                <GlobalSearchWithSuggestions
+                  onSelectDevice={(dev) => onNavigate('device-detail', { deviceId: dev.id })}
+                  placeholder="Quick Search Asset..."
+                />
+              </div>
+            )}
             {currentUser ? (
               <>
                 {/* Role Pill */}

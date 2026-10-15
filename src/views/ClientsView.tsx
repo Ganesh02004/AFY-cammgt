@@ -117,7 +117,7 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
   const activeClientContacts = contacts.filter(c => c.client_id === selectedClientId);
   const activeClientDevices = devices.filter(d => d.source_client_id === selectedClientId);
 
-  // Open Edit Client Modal
+  // Open Full-Page Edit Client
   const openEditClient = (client: ClientCompany) => {
     setEditingClient(client);
     setClientName(client.name);
@@ -129,12 +129,14 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
     setClientLat(client.latitude || null);
     setClientLng(client.longitude || null);
     setClientStatus(client.status);
-    setShowAddClient(true);
+    setIsFullPageCreate(true);
   };
 
   const handleSaveClient = (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientName.trim() || !clientCode.trim()) return;
+
+    let savedClientId = selectedClientId;
 
     if (editingClient) {
       updateClient(editingClient.id, {
@@ -148,8 +150,9 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
         longitude: clientLng,
         status: clientStatus
       });
+      savedClientId = editingClient.id;
     } else {
-      createClient({
+      const newClient = createClient({
         name: clientName.trim(),
         code: clientCode.trim(),
         address: clientAddress.trim(),
@@ -160,10 +163,12 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
         longitude: clientLng,
         status: clientStatus
       });
+      savedClientId = newClient.id;
     }
 
-    setShowAddClient(false);
+    setIsFullPageCreate(false);
     setEditingClient(null);
+    setSelectedClientId(savedClientId);
     setClientName('');
     setClientCode('');
     setClientAddress('');
@@ -327,6 +332,177 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
     setQuickProjectContactIds([]);
   };
 
+  // FULL PAGE CLIENT CREATION & EDITING SCREEN
+  if (isFullPageCreate) {
+    return (
+      <div className="space-y-6 pb-16 max-w-5xl mx-auto animate-fade-in">
+        {/* Full Page Breadcrumb & Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <button
+              onClick={() => {
+                setIsFullPageCreate(false);
+                setEditingClient(null);
+              }}
+              className="inline-flex items-center text-xs font-bold text-slate-500 hover:text-indigo-600 transition mb-2 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+              <span>Back to Clients Directory</span>
+            </button>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center space-x-2">
+              <Building2 className="w-7 h-7 text-indigo-600" />
+              <span>{editingClient ? `Edit Client Profile: ${editingClient.name}` : 'Register New Client Organization'}</span>
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Salesforce-Style Corporate Record Management • Configure client accounts with HQ addresses, GPS coordinates, and status.
+            </p>
+          </div>
+        </div>
+
+        {/* Full-Page Form Canvas */}
+        <form onSubmit={handleSaveClient} className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm space-y-6">
+          {/* Section 1: Organization Details */}
+          <div className="space-y-4">
+            <h3 className="font-extrabold text-slate-900 text-sm border-b border-slate-100 pb-2 flex items-center space-x-2">
+              <Building className="w-4 h-4 text-indigo-600" />
+              <span>1. Company Profile & Identifiers</span>
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Client Organization Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="e.g. Apex Security Solutions Pvt Ltd"
+                  className="form-input text-xs font-medium"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Client Code <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={clientCode}
+                  onChange={(e) => setClientCode(e.target.value)}
+                  placeholder="e.g. APX-001"
+                  className="form-input text-xs font-mono font-bold"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Account Status
+                </label>
+                <select
+                  value={clientStatus}
+                  onChange={(e) => setClientStatus(e.target.value as any)}
+                  className="form-select text-xs font-medium"
+                >
+                  <option value="ACTIVE">ACTIVE (Operational)</option>
+                  <option value="INACTIVE">INACTIVE (Archived)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Corporate Headquarters & GPS Location */}
+          <div className="space-y-4 pt-2">
+            <h3 className="font-extrabold text-slate-900 text-sm border-b border-slate-100 pb-2 flex items-center space-x-2">
+              <MapPin className="w-4 h-4 text-indigo-600" />
+              <span>2. Corporate Headquarters & Geocoded Address</span>
+            </h3>
+
+            <LocationPicker
+              label="Headquarters Address & Automatic GPS Location *"
+              locationAddress={clientAddress}
+              latitude={clientLat}
+              longitude={clientLng}
+              onChange={(loc) => {
+                setClientAddress(loc.address);
+                setClientLat(loc.latitude);
+                setClientLng(loc.longitude);
+                if (loc.city) setClientCity(loc.city);
+                if (loc.state) setClientState(loc.state);
+                if (loc.pin_code) setClientPinCode(loc.pin_code);
+              }}
+              required
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  City
+                </label>
+                <input
+                  type="text"
+                  value={clientCity}
+                  onChange={(e) => setClientCity(e.target.value)}
+                  placeholder="e.g. Gurugram"
+                  className="form-input text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  State / Province
+                </label>
+                <input
+                  type="text"
+                  value={clientState}
+                  onChange={(e) => setClientState(e.target.value)}
+                  placeholder="e.g. Haryana"
+                  className="form-input text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  PIN / Postal Code
+                </label>
+                <input
+                  type="text"
+                  value={clientPinCode}
+                  onChange={(e) => setClientPinCode(e.target.value)}
+                  placeholder="e.g. 122002"
+                  className="form-input text-xs font-mono"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => {
+                setIsFullPageCreate(false);
+                setEditingClient(null);
+              }}
+              className="px-5 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-100 transition flex items-center space-x-1.5 cursor-pointer"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{editingClient ? 'Save Client Changes' : 'Register & Open Client Record'}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-16 max-w-7xl mx-auto">
       {/* Header */}
@@ -348,7 +524,7 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
           onClick={() => {
             setEditingClient(null);
             setClientName('');
-            setClientCode('');
+            setClientCode(`CLT-${Math.floor(100 + Math.random() * 900)}`);
             setClientAddress('');
             setClientCity('');
             setClientState('');
@@ -356,12 +532,12 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
             setClientLat(null);
             setClientLng(null);
             setClientStatus('ACTIVE');
-            setShowAddClient(true);
+            setIsFullPageCreate(true);
           }}
           className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5 self-start sm:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Add Client Company</span>
+          <span>+ Register Client Company</span>
         </button>
       </div>
 
