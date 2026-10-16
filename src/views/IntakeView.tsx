@@ -190,7 +190,7 @@ export const IntakeView: React.FC<IntakeViewProps> = ({ onNavigate }) => {
 
         <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
           <button
-            onClick={() => onNavigate('master_inventory', { initialFilterStatus: 'ALL' })}
+            onClick={() => onNavigate('master_inventory', { status: 'ALL' })}
             className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition"
           >
             View in Master Inventory

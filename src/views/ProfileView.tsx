@@ -74,16 +74,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
 
   const handleChangePassword = (e: React.FormEvent) => {
     e.preventDefault();
+    const expectedCurrent = currentUser.password || 'admin123';
+    if (currentPassword && currentPassword !== expectedCurrent) {
+      setPasswordMsg({ success: false, text: 'Current password is incorrect.' });
+      return;
+    }
     if (!newPassword || newPassword.length < 6) {
       setPasswordMsg({ success: false, text: 'New password must be at least 6 characters.' });
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordMsg({ success: false, text: 'Passwords do not match.' });
+      setPasswordMsg({ success: false, text: 'New password and confirmation do not match.' });
       return;
     }
 
-    setPasswordMsg({ success: true, text: 'Password successfully updated.' });
+    updateUserProfile(currentUser.id, { password: newPassword });
+    setPasswordMsg({ success: true, text: 'Password successfully updated and saved.' });
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');

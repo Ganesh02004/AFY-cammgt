@@ -21,6 +21,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
 
   // New user form state
   const [username, setUsername] = useState('');
+  const [userPassword, setUserPassword] = useState('staff123');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');

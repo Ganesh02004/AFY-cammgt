@@ -240,30 +240,42 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'camguard_app_state_v2';
+const STORAGE_KEY = 'camguard_v3';
 
-// Clean up any stale v1 localStorage that might have auto-logged in users as admin
+// Clean up any stale legacy localStorage and sessionStorage that auto-logged in users as admin
 try {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    if (localStorage.getItem('camguard_app_state_v1_user')) {
-      localStorage.removeItem('camguard_app_state_v1_user');
-      localStorage.removeItem('camguard_app_state_v1_users');
-    }
+  if (typeof window !== 'undefined') {
+    const legacyKeys = [
+      'camguard_app_state_v1_user',
+      'camguard_app_state_v1_users',
+      'camguard_app_state_v2_user',
+      'camguard_app_state_v2_users',
+      'camguard_app_state_v2_session_active'
+    ];
+    legacyKeys.forEach(k => {
+      try {
+        localStorage.removeItem(k);
+        sessionStorage.removeItem(k);
+      } catch {}
+    });
   }
 } catch {
   // ignore storage errors
 }
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load saved state or use initial seed
+  // Production Auth: strictly require valid credentials; start at Sign In on new session
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY + '_user');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && (parsed.id || parsed.username)) return parsed;
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const sessionActive = sessionStorage.getItem(STORAGE_KEY + '_session_active') === 'true';
+        const saved = sessionStorage.getItem(STORAGE_KEY + '_user');
+        if (sessionActive && saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && (parsed.id || parsed.username)) return parsed;
+        }
       }
-      return null; // Require login/registration on first visit or clean session
+      return null; // Production requirement: Start at clean Sign-In screen
     } catch {
       return null;
     }
@@ -272,7 +284,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [users, setUsers] = useState<User[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY + '_users');
-      return saved ? JSON.parse(saved) : initialUsers;
+      const loadedUsers: User[] = saved ? JSON.parse(saved) : initialUsers;
+      // Ensure all users have credentials defined for strict password validation
+      return loadedUsers.map((u: User) => {
+        if (!u.password) {
+          const defaultPass = u.username === 'admin' ? 'admin123'
+            : u.username === 'manager' ? 'manager123'
+            : u.username.startsWith('collector') ? 'collector123'
+            : u.username === 'mindra' ? 'mindra123'
+            : u.username === 'operations_lead' ? 'ops123'
+            : 'password123';
+          return { ...u, password: defaultPass };
+        }
+        return u;
+      });
     } catch { return initialUsers; }
   });
 
@@ -506,17 +531,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Save to localStorage whenever state changes
+  // Save to localStorage and sessionStorage whenever currentUser changes
   useEffect(() => {
     if (currentUser) {
+      sessionStorage.setItem(STORAGE_KEY + '_session_active', 'true');
+      sessionStorage.setItem(STORAGE_KEY + '_user', JSON.stringify(currentUser));
       localStorage.setItem(STORAGE_KEY + '_user', JSON.stringify(currentUser));
     } else {
+      sessionStorage.removeItem(STORAGE_KEY + '_session_active');
+      sessionStorage.removeItem(STORAGE_KEY + '_user');
       localStorage.removeItem(STORAGE_KEY + '_user');
     }
   }, [currentUser]);
 
   // Flag to avoid circular echo loops when updating state from remote Firebase RTDB events
   const isUpdatingFromRemoteRef = React.useRef(false);
+  // Flag ensuring local state does NOT overwrite remote state on initial mount
+  const isInitializedRef = React.useRef(false);
 
   // Subscribe to live Firebase Realtime Database updates across all connected devices & sessions
   useEffect(() => {
@@ -526,16 +557,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetchDatabaseState().then((initialRemote) => {
       if (initialRemote && typeof initialRemote === 'object') {
         isUpdatingFromRemoteRef.current = true;
-        if (Array.isArray(initialRemote.devices) && initialRemote.devices.length > 0) {
+        if (Array.isArray(initialRemote.devices)) {
           setDevices(initialRemote.devices);
         }
         if (Array.isArray(initialRemote.users) && initialRemote.users.length > 0) {
           setUsers(initialRemote.users);
         }
-        if (Array.isArray(initialRemote.clients) && initialRemote.clients.length > 0) {
+        if (Array.isArray(initialRemote.clients)) {
           setClients(initialRemote.clients);
         }
-        if (Array.isArray(initialRemote.projects) && initialRemote.projects.length > 0) {
+        if (Array.isArray(initialRemote.projects)) {
           setProjects(initialRemote.projects);
         }
         if (Array.isArray(initialRemote.assignments)) setAssignments(initialRemote.assignments);
@@ -547,8 +578,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (Array.isArray(initialRemote.incidents)) setIncidents(initialRemote.incidents);
         if (Array.isArray(initialRemote.auditLogs)) setAuditLogs(initialRemote.auditLogs);
         if (Array.isArray(initialRemote.clientOffices)) setClientOffices(initialRemote.clientOffices);
-        setTimeout(() => { isUpdatingFromRemoteRef.current = false; }, 300);
+        
+        isInitializedRef.current = true;
+        setTimeout(() => { isUpdatingFromRemoteRef.current = false; }, 400);
+      } else {
+        isInitializedRef.current = true;
       }
+    }).catch(() => {
+      isInitializedRef.current = true;
     });
 
     // 2. Continuous real-time listener for live multi-device data updates
@@ -560,7 +597,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (Array.isArray(remoteData.devices)) {
         setDevices(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.devices) ? remoteData.devices! : prev);
       }
-      if (Array.isArray(remoteData.users)) {
+      if (Array.isArray(remoteData.users) && remoteData.users.length > 0) {
         setUsers(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.users) ? remoteData.users! : prev);
       }
       if (Array.isArray(remoteData.clients)) {
@@ -597,7 +634,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setClientOffices(prev => JSON.stringify(prev) !== JSON.stringify(remoteData.clientOffices) ? remoteData.clientOffices! : prev);
       }
 
-      setTimeout(() => { isUpdatingFromRemoteRef.current = false; }, 300);
+      setTimeout(() => { isUpdatingFromRemoteRef.current = false; }, 400);
     });
 
     return () => {
@@ -630,8 +667,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(STORAGE_KEY + '_notifications', JSON.stringify(notifications));
     localStorage.setItem(STORAGE_KEY + '_announcements', JSON.stringify(announcements));
 
-    // Push local mutation changes to central Firebase Realtime Database if not a remote update
-    if (!isUpdatingFromRemoteRef.current) {
+    // Push local mutation changes to central Firebase Realtime Database ONLY after initial fetch has completed
+    if (isInitializedRef.current && !isUpdatingFromRemoteRef.current) {
       syncCollectionToDatabase('users', users);
       syncCollectionToDatabase('clients', clients);
       syncCollectionToDatabase('contacts', contacts);
@@ -785,13 +822,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Auth functions
   const login = (usernameInput: string, passwordInput?: string) => {
+    const trimmedUser = (usernameInput || '').trim().toLowerCase();
+    const trimmedPass = (passwordInput || '').trim();
+
+    if (!trimmedUser) {
+      return { success: false, error: "Username or email is required." };
+    }
+    if (!trimmedPass) {
+      return { success: false, error: "Password is required." };
+    }
+
     const user = users.find(u => 
-      u.username.toLowerCase() === usernameInput.toLowerCase().trim() ||
-      u.email.toLowerCase() === usernameInput.toLowerCase().trim()
+      u.username.toLowerCase() === trimmedUser ||
+      u.email.toLowerCase() === trimmedUser
     );
 
     if (!user) {
-      return { success: false, error: "Invalid username or password. Please verify credentials." };
+      return { success: false, error: "Invalid username or email. Please check your credentials." };
+    }
+
+    // Verify Password strictly
+    const expectedPassword = user.password || (user.username === 'admin' ? 'admin123' : 'password123');
+    if (trimmedPass !== expectedPassword) {
+      return { success: false, error: "Incorrect password. Please verify your credentials." };
     }
 
     if (user.approval_status === 'DEACTIVATED' || user.approval_status === 'REJECTED' || !user.is_active) {
@@ -806,16 +859,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }
 
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(STORAGE_KEY + '_session_active', 'true');
+      sessionStorage.setItem(STORAGE_KEY + '_user', JSON.stringify(user));
+      localStorage.setItem(STORAGE_KEY + '_user', JSON.stringify(user));
+    }
     setCurrentUser(user);
     addAuditLog("LOGIN", "User", String(user.id), `User ${user.username} logged in successfully (${user.role})`);
-    return { success: true };
+    return { success: true, user };
   };
 
   const logout = () => {
     if (currentUser) {
       addAuditLog("LOGOUT", "User", String(currentUser.id), `User ${currentUser.username} logged out`);
     }
-    localStorage.removeItem(STORAGE_KEY + '_user');
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.removeItem(STORAGE_KEY + '_session_active');
+        sessionStorage.removeItem(STORAGE_KEY + '_user');
+        localStorage.removeItem(STORAGE_KEY + '_user');
+      } catch {}
+    }
     setCurrentUser(null);
   };
 
@@ -838,6 +902,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           pending_approval: true,
           error: "Your Google account is registered, but pending Administrator approval. Please wait for an Admin to review and activate your access." 
         };
+      }
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(STORAGE_KEY + '_session_active', 'true');
+        sessionStorage.setItem(STORAGE_KEY + '_user', JSON.stringify(existing));
+        localStorage.setItem(STORAGE_KEY + '_user', JSON.stringify(existing));
       }
       setCurrentUser(existing);
       addAuditLog("LOGIN_GOOGLE", "User", String(existing.id), `User ${existing.username} authenticated via Google Single Sign-On (${existing.email})`);
@@ -936,6 +1005,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: Date.now(),
       sequence_id: seq,
       username: userData.username?.trim() || `user_${Date.now()}`,
+      password: userData.password?.trim() || 'password123',
       email: normalizedEmail,
       first_name: userData.first_name?.trim() || '',
       last_name: userData.last_name?.trim() || '',
@@ -2361,7 +2431,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setClientOffices(initialClientOffices);
     setNotifications(initialNotifications);
     setAnnouncements(initialAnnouncements);
-    setCurrentUser(initialUsers[0]);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.removeItem(STORAGE_KEY + '_session_active');
+        sessionStorage.removeItem(STORAGE_KEY + '_user');
+        localStorage.removeItem(STORAGE_KEY + '_user');
+      } catch {}
+    }
+    setCurrentUser(null);
     setSequenceCounters(defaultCounters);
     setIsSessionLocked(false);
     setLastActiveTime(Date.now());
@@ -2405,6 +2482,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTasks([]);
       setIncidents([]);
       setDynamicRecords([]);
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_KEY + '_devices', '[]');
+          localStorage.setItem(STORAGE_KEY + '_assignments', '[]');
+          localStorage.setItem(STORAGE_KEY + '_pickups', '[]');
+          localStorage.setItem(STORAGE_KEY + '_transfers', '[]');
+          localStorage.setItem(STORAGE_KEY + '_returns', '[]');
+          localStorage.setItem(STORAGE_KEY + '_movements', '[]');
+          localStorage.setItem(STORAGE_KEY + '_tasks', '[]');
+          localStorage.setItem(STORAGE_KEY + '_incidents', '[]');
+          localStorage.setItem(STORAGE_KEY + '_dynamic_records', '[]');
+        } catch {}
+      }
 
       syncCollectionToDatabase('devices', []);
       syncCollectionToDatabase('assignments', []);

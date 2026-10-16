@@ -177,7 +177,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
       setLoginError('Please enter your username or email address.');
       return;
     }
-    const res = login(username.trim(), password);
+    if (!password.trim()) {
+      setLoginError('Please enter your password.');
+      return;
+    }
+    const res = login(username.trim(), password.trim());
     if (res.success) {
       onSuccess();
     } else {
@@ -222,6 +226,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
       return;
     }
 
+    if (!regPassword || regPassword.length < 6) {
+      setRegMsg({ type: 'error', text: 'Password is required and must be at least 6 characters long.' });
+      return;
+    }
+
     if ((regRole === 'MANAGEMENT' || regRole === 'POSTMAN') && !regPhoto) {
       setRegMsg({ type: 'error', text: 'Profile picture is required for Management Staff and Field Collector accounts.' });
       return;
@@ -238,6 +247,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
 
     const res = registerUser({
       username: regUsername.trim(),
+      password: regPassword.trim(),
       email: regEmail.trim(),
       first_name: regFirstName.trim(),
       last_name: regLastName.trim(),
@@ -355,13 +365,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Password
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span>Password</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Required</span>
                   </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                     <input
                       type="password"
+                      required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
@@ -374,10 +386,46 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
                   type="submit"
                   className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition shadow-md shadow-indigo-100 flex items-center justify-center space-x-2 cursor-pointer"
                 >
-                  <span>Authenticate</span>
+                  <span>Authenticate & Sign In</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
+                {/* Preconfigured Testing Credentials Card */}
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    <span className="flex items-center space-x-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Test Credentials</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">Click to prefill</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5 text-center">
+                    <button
+                      type="button"
+                      onClick={() => handleAutofillDemo('admin', 'admin123')}
+                      className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-left transition cursor-pointer"
+                    >
+                      <div className="text-[10px] font-bold text-purple-800">Admin</div>
+                      <div className="text-[9px] font-mono text-purple-600 truncate">admin123</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAutofillDemo('manager', 'manager123')}
+                      className="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-left transition cursor-pointer"
+                    >
+                      <div className="text-[10px] font-bold text-blue-800">Manager</div>
+                      <div className="text-[9px] font-mono text-blue-600 truncate">manager123</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAutofillDemo('collector1', 'collector123')}
+                      className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-left transition cursor-pointer"
+                    >
+                      <div className="text-[10px] font-bold text-emerald-800">Collector</div>
+                      <div className="text-[9px] font-mono text-emerald-600 truncate">collector123</div>
+                    </button>
+                  </div>
+                </div>
               </form>
             </div>
           ) : (
@@ -475,12 +523,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Password</label>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1 flex items-center justify-between">
+                    <span>Password *</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Min 6 characters</span>
+                  </label>
                   <input
                     type="password"
+                    required
+                    minLength={6}
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="Create a password"
+                    placeholder="Create a password (min 6 characters)"
                     className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>

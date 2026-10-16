@@ -84,7 +84,7 @@ export const DeviceDetailView: React.FC<DeviceDetailViewProps> = ({ deviceId, on
                 <span>Assign to Worker</span>
               </button>
               <button
-                onClick={() => onNavigate('transfers', { initiateDeviceId: device.id })}
+                onClick={() => onNavigate('transfers', { deviceId: device.id })}
                 className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center space-x-1.5"
               >
                 <ArrowRightLeft className="w-4 h-4 text-slate-500" />

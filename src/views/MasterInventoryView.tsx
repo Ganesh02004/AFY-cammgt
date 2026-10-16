@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Warehouse, Search, Filter, Download, Plus, QrCode, 
   Printer, ShieldAlert, ChevronRight, Boxes, CheckSquare, Square,
@@ -28,6 +28,12 @@ export const MasterInventoryView: React.FC<MasterInventoryViewProps> = ({
   const [exportNotice, setExportNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (initialFilterStatus) {
+      setStatusFilter(initialFilterStatus);
+    }
+  }, [initialFilterStatus]);
 
   const filtered = devices.filter(d => {
     const matchesSearch = 

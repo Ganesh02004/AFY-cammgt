@@ -9,6 +9,7 @@ export const initialUsers: User[] = [
   {
     id: 1,
     username: "admin",
+    password: "admin123",
     email: "admin@camera-inventory.local",
     first_name: "Aarav",
     last_name: "Mehta",
@@ -24,6 +25,7 @@ export const initialUsers: User[] = [
   {
     id: 2,
     username: "manager",
+    password: "manager123",
     email: "manager@camera-inventory.local",
     first_name: "Deepa",
     last_name: "Nair",
@@ -39,6 +41,7 @@ export const initialUsers: User[] = [
   {
     id: 3,
     username: "collector1",
+    password: "collector123",
     email: "collector1@camera-inventory.local",
     first_name: "Rahul",
     last_name: "Joshi",
@@ -54,6 +57,7 @@ export const initialUsers: User[] = [
   {
     id: 4,
     username: "collector2",
+    password: "collector123",
     email: "collector2@camera-inventory.local",
     first_name: "Sunil",
     last_name: "Verma",
@@ -69,6 +73,7 @@ export const initialUsers: User[] = [
   {
     id: 5,
     username: "mindra",
+    password: "mindra123",
     email: "mindra@afy-inventory.com",
     first_name: "M",
     last_name: "Indra",
@@ -85,6 +90,7 @@ export const initialUsers: User[] = [
   {
     id: 7,
     username: "operations_lead",
+    password: "ops123",
     email: "operations.lead@afy-inventory.com",
     first_name: "Vikram",
     last_name: "Rao",

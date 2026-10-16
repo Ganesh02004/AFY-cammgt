@@ -26,13 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenS
 
   const pendingApprovalsCount = users.filter(u => u.approval_status === 'PENDING').length;
 
-  const handleRoleSwitch = (username: string) => {
-    const target = users.find(u => u.username === username);
-    if (target) {
-      setCurrentUser(target);
-      setUserMenuOpen(false);
-    }
-  };
+
 
   return (
     <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 no-print select-none">
@@ -364,40 +358,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenS
 
                       {currentUser.role === 'ADMIN' && (
                         <>
-                          <div className="border-t border-slate-100 my-1"></div>
-                          {/* Admin Only Role Switcher */}
-                          <div className="px-4 py-2 bg-slate-50 border-y border-slate-100">
-                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                              <span>Admin Role Switcher</span>
-                              <span className="text-[9px] text-indigo-600">Dev Mode</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-1 text-[11px]">
-                              <button
-                                onClick={() => handleRoleSwitch('admin')}
-                                className={`p-1 text-left rounded font-medium ${currentUser.username === 'admin' ? 'bg-purple-100 text-purple-900 font-bold' : 'hover:bg-slate-200 text-slate-700'}`}
-                              >
-                                👑 Admin
-                              </button>
-                              <button
-                                onClick={() => handleRoleSwitch('manager')}
-                                className={`p-1 text-left rounded font-medium ${currentUser.username === 'manager' ? 'bg-blue-100 text-blue-900 font-bold' : 'hover:bg-slate-200 text-slate-700'}`}
-                              >
-                                🛡️ Manager
-                              </button>
-                              <button
-                                onClick={() => handleRoleSwitch('collector1')}
-                                className={`p-1 text-left rounded font-medium ${currentUser.username === 'collector1' ? 'bg-emerald-100 text-emerald-900 font-bold' : 'hover:bg-slate-200 text-slate-700'}`}
-                              >
-                                📦 Collector 1
-                              </button>
-                              <button
-                                onClick={() => handleRoleSwitch('collector2')}
-                                className={`p-1 text-left rounded font-medium ${currentUser.username === 'collector2' ? 'bg-emerald-100 text-emerald-900 font-bold' : 'hover:bg-slate-200 text-slate-700'}`}
-                              >
-                                📦 Collector 2
-                              </button>
-                            </div>
-                          </div>
 
                           <button
                             onClick={() => { onNavigate('studio'); setUserMenuOpen(false); }}

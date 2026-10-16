@@ -59,7 +59,7 @@ export const App: React.FC = () => {
   const isPendingApproval = currentUser.approval_status === 'PENDING';
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-indigo-500 selection:text-white max-w-full overflow-x-hidden">
       {/* Top Navbar */}
       <Navbar
         currentView={currentView}
